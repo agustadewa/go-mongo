@@ -1,4 +1,4 @@
-package gomongo
+package go-mongo
 
 import (
 	"context"
