@@ -10,86 +10,101 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type post struct {
-	Title string `json:"title,omitempty"`
-	Body  string `json:"body,omitempty"`
+//Identity type
+type Identity struct {
+	CertificateID     int32  `json:"certificate_id,omitempty"`
+	CertificateNumber string `json:"certificate_number,omitempty"`
+	Date              string `json:"date,omitempty"`
+	Time              string `json:"time,omitempty"`
+	BandUnit          string `json:"band_unit,omitempty"`
+	Band              int32  `json:"band,omitempty"`
+	FrequencyUnit     string `json:"frequency_unit,omitempty"`
+	Frequency         int32  `json:"frequency,omitempty"`
+	CallSign          string `json:"call_sign,omitempty"`
+	Name              string `json:"name,omitempty"`
+	EventID           int32  `json:"event_id,omitempty"`
+	DateCreated       string `json:"date_created,omitempty"`
+	CreatedBy         string `json:"created_by,omitempty"`
+	DateModified      string `json:"date_modified,omitempty"`
+	ModifiedBy        string `json:"modified_by,omitempty"`
+	DownloadCount     int32  `json:"download_count,omitempty"`
+	CityID            int32  `json:"city_id,omitempty"`
 }
 
-type db struct {
-	ctx    context.Context
-	client mongo.Client
-	cancel context.CancelFunc
+// Adaptor Type
+type Adaptor struct {
+	Client   mongo.Client
+	DBName   string
+	CollName string
 }
 
-func (db *db) connect(uri string) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
+//Connect method
+func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
+	Client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	db.client = *client
+	adaptor.Client = *Client
 
-	db.ctx, db.cancel = context.WithCancel(context.Background())
-	err = db.client.Connect(db.ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (db *db) deferThis() {
-	db.cancel()
-	db.client.Disconnect(db.ctx)
-}
-
-func (db *db) insertPost(title string, body string) {
-	post := post{title, body}
-
-	collection := db.client.Database("dev").Collection("posts")
-	insertResult, err := collection.InsertOne(db.ctx, post)
+	err = adaptor.Client.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Inserted post with ID:", insertResult.InsertedID)
 }
 
-func (db *db) getPost(title string) bson.M {
-	post := bson.M{}
+//Insert method
+func (adaptor *Adaptor) Insert(ctx context.Context, identity Identity) {
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
+	_, err := collection.InsertOne(ctx, identity)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	collection := db.client.Database("dev").Collection("posts")
-	err := collection.FindOne(db.ctx, bson.M{"title": title}).Decode(&post)
+	fmt.Println(identity.Name, "inserted.")
+}
+
+//GetIdentity method
+func (adaptor *Adaptor) GetIdentity(ctx context.Context, name string) bson.M {
+	identity := bson.M{}
+
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
+	err := collection.FindOne(ctx, bson.M{"name": name}).Decode(identity)
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	return post
+	return identity
 }
 
-func (db *db) getPosts(title string) []bson.M {
-	collection := db.client.Database("dev").Collection("posts")
-	cursor, err := collection.Find(db.ctx, bson.M{"title": title})
+//GetIdentities method
+func (adaptor *Adaptor) GetIdentities(ctx context.Context, name string) []bson.M {
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
+	cursor, err := collection.Find(ctx, bson.M{"name": name})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cursor.Close(db.ctx)
+	defer cursor.Close(ctx)
 
 	result := []bson.M{}
 
-	for cursor.Next(db.ctx) {
-		receive := bson.M{}
-		err := cursor.Decode(&receive)
+	for cursor.Next(ctx) {
+		received := bson.M{}
+		err := cursor.Decode(&received)
 		if err != nil {
 			fmt.Println(err)
 		}
-		result = append(result, receive)
+		result = append(result, received)
 	}
 	return result
 }
 
-func (db *db) deletePost(title string) {
-	collection := db.client.Database("dev").Collection("posts")
-	delResult, err := collection.DeleteOne(db.ctx, bson.M{"title": title})
+//DeletePost method
+func (adaptor *Adaptor) DeletePost(ctx context.Context, name string) {
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
+	delResult, err := collection.DeleteOne(ctx, bson.M{"name": name})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,12 +112,17 @@ func (db *db) deletePost(title string) {
 	fmt.Println(delResult)
 }
 
-func (db *db) deleteAll(title string) {
-	collection := db.client.Database("dev").Collection("posts")
-	delResult, err := collection.DeleteMany(db.ctx, bson.M{"title": title})
-	if err != nil {
-		log.Fatal(err)
-	}
+//DeleteCollection method
+func (adaptor *Adaptor) DeleteCollection(ctx context.Context, name string, deleteCode string) {
+	if deleteCode == "AGREE TO DELETE "+adaptor.CollName {
+		collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
+		delResult, err := collection.DeleteMany(ctx, bson.M{"name": name})
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	fmt.Println(delResult)
+		fmt.Println(delResult)
+	} else {
+		fmt.Println("ACCESS DENIED")
+	}
 }
