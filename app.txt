@@ -1,0 +1,28 @@
+// package gomongo
+
+// import (
+// 	"github.com/gin-contrib/static"
+// 	"github.com/gin-gonic/gin"
+// )
+
+// // Service type
+// type Service struct {
+// 	Router *gin.Engine
+// }
+
+// // func (svc Service) init() {
+// // 	svc.Router = gin.Default()
+// // }
+
+// // ServeStatic method
+// func (svc Service) ServeStatic(path string) {
+// 	svc.Router.Use(static.Serve("/", static.LocalFile(path, false)))
+// }
+
+// //GetIdentities getting identities as JSON
+// // func (svc Service) GetIdentities(path string, handler func) {
+
+// // 	svc.Router.Get("/", handler(c *gin.Context, payload string){
+// // 		c.String(200, payload)
+// // 	})
+// // }
