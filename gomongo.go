@@ -81,6 +81,11 @@ func (adaptor *Adaptor) GetQuery(ctx context.Context, queryName bson.M, isString
 
 		return string(jsonBytes)
 
+		// var testvar interface{}
+		// Parser{}.Parse(&received, &testvar, true)
+
+		// return testvar.(string)
+
 	} else {
 		// STRUCT
 		bsonBytes, _ := bson.Marshal(&received)
@@ -100,28 +105,26 @@ func (adaptor *Adaptor) GetQueries(ctx context.Context, queryName bson.M, option
 	adaptor.filterHandler(optionsFilter, findOptions)
 
 	cursor, _ := collection.Find(ctx, queryName, findOptions)
-	var result []interface{}
+	var result []bson.M
 	for cursor.Next(ctx) {
 		received := bson.M{}
 
 		if err := cursor.Decode(&received); err != nil {
 			fmt.Println(err)
 		}
-
-		bsonBytes, _ := bson.Marshal(&received)
-
-		var subIdentity bson.M
-		bson.Unmarshal(bsonBytes, &subIdentity)
-
-		result = append(result, subIdentity)
+		result = append(result, received)
 	}
 
 	if isStringReturned {
 		// JSON
-		jsonBytes, _ := bson.MarshalJSON(&result)
+		// jsonBytes, _ := bson.MarshalJSON(&result)
 
 		// return string(jsonBytes)
-		return string(jsonBytes)
+
+		var testvar interface{}
+		Parser{}.Parse(&result, &testvar, true)
+
+		return testvar.(string)
 
 	} else {
 		// STRUCT
@@ -143,7 +146,6 @@ func (adaptor *Adaptor) GetIdentities(ctx context.Context, queryName bson.M, nam
 	defer cursor.Close(ctx)
 
 	var result []Identity
-
 	for cursor.Next(ctx) {
 		received := bson.M{}
 
