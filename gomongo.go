@@ -12,64 +12,63 @@ import (
 
 // Payload type
 type Payload struct {
-	Kind    string      `bson:"kind"`
-	Values  interface{} `bson:"values"`
-	Options FindOptions `bson:"options",omitempy`
+	Kind    string      `bson:"kind" json:"kind"`
+	Values  interface{} `bson:"values" json:"values"`
+	Options FindOptions `bson:"options",omitempy json:"options",omitempy`
 }
 
 //FindOptions type
 type FindOptions struct {
-	Limit int64 `bson:"limit"`
-}
-
-//FullIdentity type
-type FullIdentity struct {
-	CertificateID     int32  `bson:"certificate_id,omitempty"`
-	CertificateNumber string `bson:"certificate_number,omitempty"`
-	Date              string `bson:"date,omitempty"`
-	Time              string `bson:"time,omitempty"`
-	BandUnit          string `bson:"band_unit,omitempty"`
-	Band              int32  `bson:"band,omitempty"`
-	FrequencyUnit     string `bson:"frequency_unit,omitempty"`
-	Frequency         int32  `bson:"frequency,omitempty"`
-	CallSign          string `bson:"call_sign,omitempty"`
-	Name              string `bson:"name,omitempty"`
-	EventID           int32  `bson:"event_id,omitempty"`
-	DateCreated       string `bson:"date_created,omitempty"`
-	CreatedBy         string `bson:"created_by,omitempty"`
-	DateModified      string `bson:"date_modified,omitempty"`
-	ModifiedBy        string `bson:"modified_by,omitempty"`
-	DownloadCount     int32  `bson:"download_count,omitempty"`
-	CityID            int32  `bson:"city_id,omitempty"`
+	Limit      int64       `bson:"limit",omitempy json:"limit",omitempy`
+	Projection interface{} `bson:"projection",omitempy json:"projection",omitempy`
+	Sort       interface{} `bson:"sort",omitempy json:"sort",omitempy`
+	Skip       int64       `bson:"skip",omitempy json:"skip",omitempy`
 }
 
 //Identity type
 type Identity struct {
-	Name     string `bson:"name"`
-	Band     int32  `bson:"band"`
-	CallSign string `bson:"call_sign"`
+	Attributes        []Attributes `bson:"attributes,omitempty" json:"attributes,omitempty"`
+	CertificateNumber string       `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
+	CallSign          string       `bson:"call_sign" json:"call_sign"`
+	CityID            int32        `bson:"city_id" json:"city_id"`
+	Date              Date         `bson:"date" json:"date"`
+	EventID           int32        `bson:"event_id" json:"event_id"`
+	Name              string       `bson:"name" json:"name"`
+}
+
+// Date type
+type Date struct {
+	CreatedBy    string `bson:"created_by" json:"created_by"`
+	DateCreated  string `bson:"date_created" json:"date_created"`
+	DateModified string `bson:"date_modified" json:"date_modified"`
+	ModifiedBy   string `bson:"modified_by" json:"modified_by"`
+}
+
+// Attributes type
+type Attributes struct {
+	Band      string `bson:"band" json:"band"`
+	Frequency string `bson:"frequency" json:"frequency"`
 }
 
 // EventCallSign type
 type EventCallSign struct {
-	Description         string `bson:"description"`
-	Date                int64  `bson:"date"`
-	CertificateFormat   string `bson:"format_certificate"`
-	CertificateTemplate string `bson:"certificate_template"`
-	Name                string `bson:"name"`
-	IsActive            bool   `bson:"is_active"`
-	IsHidden            bool   `bson:"is_hidden"`
+	Attributes          []Attributes `bson:"attributes" json:"attributes"`
+	CertificateTemplate string       `bson:"certificate_template" json:"certificate_template"`
+	CertificateFormat   string       `bson:"certificate_format" json:"certificate_format"`
+	Description         string       `bson:"description" json:"description"`
+	Date                string       `bson:"date" json:"date"`
+	Name                string       `bson:"name" json:"name"`
+	IsActive            bool         `bson:"is_active" json:"is_active"`
+	IsHidden            bool         `bson:"is_hidden" json:"is_hidden"`
 }
 
 // Adaptor Type
 type Adaptor struct {
-	Client   mongo.Client
-	DBName   string
-	CollName string
-	Temp     interface{}
+	Client mongo.Client
+	DBName string
 }
 
-//Connect method
+// Connect method
 func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
 	Client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
@@ -85,85 +84,128 @@ func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
 
 }
 
-//QueryFind query find to mongodb
-func (adaptor *Adaptor) QueryFind(ctx context.Context, query bson.M) ([]byte, error) {
-	var received bson.M
+// // QueryUpdateDocument method
+// func (adaptor *Adaptor) QueryUpdateDocument(ctx context.Context, collname string, query []byte) {
+// 	Collection := adaptor.Client.Database(adaptor.DBName).Collection(ctx, collname)
 
-	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
-	errFinding := collection.FindOne(ctx, query).Decode(&received)
-	jsonBytes, _ := bson.MarshalJSON(&received)
+// }
 
-	return jsonBytes, errFinding
+// QueryCreateCollection create collection in mongodb
+func (adaptor *Adaptor) QueryCreateCollection(ctx context.Context, collname string) error {
+	errCreateCollection := adaptor.Client.Database(adaptor.DBName).CreateCollection(ctx, collname)
+	return errCreateCollection
 }
 
-//QueryInsert Query Insert to mongodb
-func (adaptor *Adaptor) QueryInsert(ctx context.Context, byteQuery []byte) (interface{}, error) {
+// QueryInsert Query Insert to mongodb
+func (adaptor *Adaptor) QueryInsert(ctx context.Context, collname string, byteQuery []byte) (interface{}, error) {
 	var insertResult interface{}
 	var errorInserting error
 
 	var query bson.M
-	fmt.Println(string(byteQuery))
 	bson.UnmarshalJSON(byteQuery, &query)
-
-	collection := adaptor.Client.Database(adaptor.DBName).Collection("event")
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	insertResult, errorInserting = collection.InsertOne(ctx, query)
 
 	return insertResult, errorInserting
 }
 
-// //Insert method
-// func (adaptor *Adaptor) Insert(ctx context.Context, identity FullIdentity) {
-// 	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
-// 	_, err := collection.InsertOne(ctx, identity)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-//
-// 	fmt.Println(identity.Name, "inserted.")
-// }
+// QueryFind query find to mongodb
+func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuery []byte) ([]byte, error) {
+	var query bson.M
+	bson.UnmarshalJSON(byteQuery, &query)
 
-// //GetQueries method
-// func (adaptor *Adaptor) GetQueries(ctx context.Context, queryName bson.M, optionsFilter bson.M, isStringReturned bool) interface{} {
-// 	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
-//
-// 	findOptions := options.Find()
-//
-// 	adaptor.filterHandler(optionsFilter, findOptions)
-//
-// 	cursor, _ := collection.Find(ctx, queryName, findOptions)
-// 	var result []bson.M
-// 	for cursor.Next(ctx) {
-// 		received := bson.M{}
-//
-// 		if err := cursor.Decode(&received); err != nil {
-// 			fmt.Println(err)
-// 		}
-// 		result = append(result, received)
-// 	}
-//
-// 	if isStringReturned {
-// 		// JSON
-// 		// jsonBytes, _ := bson.MarshalJSON(&result)
-//
-// 		// return string(jsonBytes)
-//
-// 		var testvar interface{}
-// 		Parser{}.Parse(&result, &testvar, true)
-//
-// 		return testvar.(string)
-//
-// 	} else {
-// 		// STRUCT
-// 		bsonBytes, _ := bson.Marshal(&result)
-// 		var result FullIdentity
-// 		bson.Unmarshal(bsonBytes, &result)
-//
-// 		return result
-// 	}
-// }
+	var received bson.M
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	errFinding := collection.FindOne(ctx, query).Decode(&received)
+	jsonBytes, _ := bson.MarshalJSON(&received)
+	fmt.Println("JSONBYTES", string(jsonBytes))
+
+	return jsonBytes, errFinding
+}
+
+// QueryFindMany query find many to mongodb
+func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byteQuery []byte, findOptions *options.FindOptions) ([]byte, error) {
+	var query bson.M
+	bson.UnmarshalJSON(byteQuery, &query)
+
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	cursor, _ := collection.Find(ctx, query, findOptions)
+
+	var received []bson.M
+	var err error
+
+	if err = cursor.All(ctx, &received); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(received)
+	var results []byte
+	results, err = bson.MarshalJSON(received)
+
+	return results, err
+}
+
+///////////// PAYLOAD FILTER /////////////
+
+// ParsePayload method
+func (adaptor *Adaptor) ParsePayload(jsonByte []byte, out interface{}) {
+	if isErr := bson.UnmarshalJSON(jsonByte, out); isErr != nil {
+		fmt.Println(isErr)
+	}
+}
+
+// Modeling filler
+func (adaptor *Adaptor) Modeling(jsonByte *[]byte, collname string) error {
+	var err error
+
+	if collname == "identity" {
+		identity := Identity{}
+		err = bson.UnmarshalJSON(*jsonByte, &identity)
+		*jsonByte, err = bson.MarshalJSON(&identity)
+
+	} else if collname == "event" {
+		event := EventCallSign{}
+		err = bson.UnmarshalJSON(*jsonByte, &event)
+		*jsonByte, err = bson.MarshalJSON(&event)
+	}
+	return err
+}
+
+// ParseOptions method
+func (adaptor *Adaptor) ParseOptions(payload Payload, options *options.FindOptions) {
+	// LIMIT
+	limitVal := payload.Options.Limit
+	if limitVal > 0 {
+		if limitVal >= 100 {
+			options.SetLimit(100)
+		} else {
+			options.SetLimit(limitVal)
+		}
+	} else {
+		options.SetLimit(100)
+	}
+
+	// SORT
+	if payload.Options.Sort != nil {
+		options.SetSort(payload.Options.Sort)
+	}
+
+	// SKIP
+	skipVal := payload.Options.Skip
+	if skipVal >= 0 {
+		options.SetSkip(skipVal)
+	} else {
+		options.SetSkip(0)
+	}
+
+	// PROJECTION
+	if payload.Options.Projection != nil {
+		options.SetProjection(payload.Options.Projection)
+	}
+}
 
 // //GetIdentities method
-// func (adaptor *Adaptor) GetIdentities(ctx context.Context, queryName bson.M, name string) []FullIdentity {
+// func (adaptor *Adaptor) GetIdentities(ctx context.Context, queryName bson.M, name string) []Identity {
 // 	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
 // 	cursor, err := collection.Find(ctx, queryName)
 // 	if err != nil {
@@ -171,7 +213,7 @@ func (adaptor *Adaptor) QueryInsert(ctx context.Context, byteQuery []byte) (inte
 // 	}
 // 	defer cursor.Close(ctx)
 //
-// 	var result []FullIdentity
+// 	var result []Identity
 // 	for cursor.Next(ctx) {
 // 		received := bson.M{}
 //
@@ -180,7 +222,7 @@ func (adaptor *Adaptor) QueryInsert(ctx context.Context, byteQuery []byte) (inte
 // 		}
 //
 // 		bsonBytes, _ := bson.Marshal(&received)
-// 		var subIdentity FullIdentity
+// 		var subIdentity Identity
 // 		bson.Unmarshal(bsonBytes, &subIdentity)
 //
 // 		result = append(result, subIdentity)
@@ -214,53 +256,9 @@ func (adaptor *Adaptor) QueryInsert(ctx context.Context, byteQuery []byte) (inte
 // 	}
 // }
 
-///////////// FILTER HANDLDER /////////////
-// func (adaptor *Adaptor) filterHandler(optionsFilter bson.M, mongoFindOptions *options.FindOptions) {
-// 	SetLimitHandler := func(limitValue int64) {
-// 		mongoFindOptions.SetLimit(limitValue)
-// 	}
-//
-// 	for key, value := range optionsFilter["options"].(map[string]interface{}) {
-// 		// fmt.Printf("%v %T", key, value)
-// 		if key == "limit" {
-// 			SetLimitHandler(int64(value.(float64)))
-// 		}
+// // LegalizePayload method
+// func (adaptor *Adaptor) LegalizePayload(bsonPayload bson.M, out interface{}) {
+// 	for key, value := range bsonPayload {
+// 		fmt.Printf("Key: %v Value: %v\n", key, value)
 // 	}
 // }
-
-///////////// PAYLOAD FILTER /////////////
-
-// ParsePayload method
-func (adaptor *Adaptor) ParsePayload(jsonByte []byte, out interface{}) {
-	if isErr := bson.UnmarshalJSON(jsonByte, out); isErr != nil {
-		fmt.Println(isErr)
-	}
-
-}
-
-// LegalizePayload method
-func (adaptor *Adaptor) LegalizePayload(bsonPayload bson.M, out interface{}) {
-	for key, value := range bsonPayload {
-		fmt.Printf("Key: %v Value: %v\n", key, value)
-	}
-}
-
-///////////// FILTER HANDLDER /////////////
-func (adaptor *Adaptor) parserFilter(payload Payload, mongoFindOptions *options.FindOptions) {
-	var payloadOptions FindOptions = payload.Options
-
-	if payloadOptions.Limit != 0 {
-		fmt.Println("limit: ", payloadOptions.Limit)
-	}
-
-	// SetLimitHandler := func(limitValue int64) {
-	// 	mongoFindOptions.SetLimit(limitValue)
-	// }
-
-	// for key, value := range optionsFilter["options"].(map[string]interface{}) {
-	// 	// fmt.Printf("%v %T", key, value)
-	// 	if key == "limit" {
-	// 		SetLimitHandler(int64(value.(float64)))
-	// 	}
-	// }
-}
