@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"io"
 	"math/rand"
 	"os"
 	"regexp"
@@ -51,6 +52,46 @@ func (tool Tools) PrintPDF(name, callSign, band, templatePath, outPath, fileType
 	})
 
 	err := pdf.OutputFileAndClose(outPath)
+	if err != nil {
+		fmt.Println("ERRRORRR! ", err)
+	}
+	return err
+}
+
+// PrintPDF method
+func (tool Tools) PrintPDFV2(name, callSign, band, templatePath, fileType string, w io.Writer) error {
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.SetFontLocation("./public/TEMP/FONT")
+	pdf.AddFont("ArchivoBlack-Regular", "", "ArchivoBlack-Regular.json")
+	pdf.SetFontLocation("./public/TEMP/FONT")
+	pdf.AddFont("ATOMICCLOCKRADIO", "", "ATOMICCLOCKRADIO.json")
+
+	pdf.SetHeaderFunc(func() {
+		// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
+		pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
+
+		pdf.SetFont("ArchivoBlack-Regular", "", 47)
+		pdf.SetXY(4, 91)
+		pdf.SetTextColor(12, 168, 149)
+		pdf.Cell(40, 10, callSign)
+
+		pdf.SetFont("ArchivoBlack-Regular", "", 25)
+		pdf.SetXY(6, 105)
+		pdf.SetTextColor(12, 168, 149)
+		pdf.Cell(10, 10, name)
+
+		pdf.SetFont("ATOMICCLOCKRADIO", "", 23)
+		pdf.SetTextColor(255, 255, 255)
+		if band == "40 m" {
+			pdf.SetXY(131, 43)
+			pdf.Cell(10, 10, "7.135")
+		} else if band == "2 m" {
+			pdf.SetXY(119, 43)
+			pdf.Cell(10, 10, "145.240")
+		}
+	})
+
+	err := pdf.Output(w)
 	if err != nil {
 		fmt.Println("ERRRORRR! ", err)
 	}

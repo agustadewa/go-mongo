@@ -160,6 +160,13 @@ func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuer
 	return jsonBytes, errFinding
 }
 
+// QueryFindV2 query find to mongodb
+func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, byteQuery interface{}, result interface{}) error {
+
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
+	return collection.FindOne(ctx, byteQuery).Decode(&result)
+}
+
 // QueryFindMany query find many to mongodb
 func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byteQuery []byte, findOptions *options.FindOptions) ([]byte, error) {
 	var query bson.M
