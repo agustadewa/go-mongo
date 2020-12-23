@@ -164,7 +164,7 @@ func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuer
 func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, byteQuery interface{}, result interface{}) error {
 
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
-	return collection.FindOne(ctx, byteQuery).Decode(&result)
+	return collection.FindOne(ctx, byteQuery).Decode(result)
 }
 
 // QueryFindMany query find many to mongodb
