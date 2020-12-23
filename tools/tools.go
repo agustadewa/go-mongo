@@ -99,11 +99,11 @@ func (tool Tools) PrintPDFV2(name, callSign, band, templatePath, fileType string
 }
 
 // SaveImageFromB64 method
-func (tool Tools) SaveImageFromB64(b64 *string, filePath string) error {
+func (tool Tools) SaveImageFromB64(b64 string, filePath string) error {
 	var err error
 
 	var unbased []byte
-	unbased, err = base64.StdEncoding.Strict().DecodeString(*b64)
+	unbased, err = base64.StdEncoding.Strict().DecodeString(b64)
 
 	reader := bytes.NewReader(unbased)
 	var img image.Image
