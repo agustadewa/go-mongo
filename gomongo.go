@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -30,10 +32,10 @@ type Identity struct {
 	Attributes        []Attributes `bson:"attributes,omitempty" json:"attributes,omitempty"`
 	CertificateNumber string       `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
 	CallSign          string       `bson:"call_sign" json:"call_sign"`
-	CityID            int32        `bson:"city_id" json:"city_id"`
-	Date              Date         `bson:"date" json:"date"`
-	EventID           int32        `bson:"event_id" json:"event_id"`
+	EventID           string       `bson:"event_id" json:"event_id"`
 	Name              string       `bson:"name" json:"name"`
+	IsFulfilled       bool         `bson:"is_fulfilled" json:"is_fulfilled"`
+	// Date              Date         `bson:"date" json:"date"`
 }
 
 // Date type
@@ -48,6 +50,22 @@ type Date struct {
 type Attributes struct {
 	Band      string `bson:"band" json:"band"`
 	Frequency string `bson:"frequency" json:"frequency"`
+	Date      string `bson:"date" json:"date"`
+}
+
+// Image type
+type Image struct {
+	FileName string `bson:"file_name" json:"file_name"`
+	B64      string `bson:"b64" json:"b64"`
+}
+
+// AddCallSignPayload type
+type CallSignPayload struct {
+	Attributes        Attributes `bson:"attributes" json:"attributes"`
+	CertificateNumber string     `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
+	CallSign          string     `bson:"call_sign" json:"call_sign"`
+	EventID           string     `bson:"event_id" json:"event_id"`
+	Name              string     `bson:"name" json:"name"`
 }
 
 // EventCallSign type
@@ -60,6 +78,7 @@ type EventCallSign struct {
 	Name                string       `bson:"name" json:"name"`
 	IsActive            bool         `bson:"is_active" json:"is_active"`
 	IsHidden            bool         `bson:"is_hidden" json:"is_hidden"`
+	CityID              int32        `bson:"city_id" json:"city_id"`
 }
 
 // Adaptor Type
@@ -84,11 +103,29 @@ func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
 
 }
 
-// // QueryUpdateDocument method
-// func (adaptor *Adaptor) QueryUpdateDocument(ctx context.Context, collname string, query []byte) {
-// 	Collection := adaptor.Client.Database(adaptor.DBName).Collection(ctx, collname)
+// QueryUpdateDocument method
+func (adaptor *Adaptor) QueryUpdateDocument(ctx context.Context, collname string, filterQuery bson.M, updateQuery bson.M) error {
+	var err error
+	fmt.Println("filterQuery", filterQuery)
+	fmt.Println("updateQuery", updateQuery)
 
-// }
+	Collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	_, err = Collection.UpdateMany(ctx, filterQuery, updateQuery)
+
+	return err
+}
+
+// QueryUpdateOne method
+func (adaptor *Adaptor) QueryUpdateOne(ctx context.Context, collname string, filterQuery bson.M, updateQuery bson.M) (*mongo.UpdateResult, error) {
+	var err error
+	fmt.Println("filterQuery", filterQuery)
+	fmt.Println("updateQuery", updateQuery)
+
+	var result *mongo.UpdateResult
+	result, err = adaptor.Client.Database(adaptor.DBName).Collection(collname).UpdateOne(ctx, filterQuery, updateQuery)
+
+	return result, err
+}
 
 // QueryCreateCollection create collection in mongodb
 func (adaptor *Adaptor) QueryCreateCollection(ctx context.Context, collname string) error {
@@ -118,7 +155,7 @@ func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuer
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	errFinding := collection.FindOne(ctx, query).Decode(&received)
 	jsonBytes, _ := bson.MarshalJSON(&received)
-	fmt.Println("JSONBYTES", string(jsonBytes))
+	// fmt.Println("JSONBYTES", string(jsonBytes))
 
 	return jsonBytes, errFinding
 }
@@ -138,11 +175,40 @@ func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byte
 		log.Fatal(err)
 	}
 
-	fmt.Println(received)
+	// fmt.Println(received)
 	var results []byte
 	results, err = bson.MarshalJSON(received)
 
 	return results, err
+}
+
+// QueryCount query find to mongodb
+func (adaptor *Adaptor) QueryCount(ctx context.Context, collname string, query bson.M) (int64, error) {
+	Count, err := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		CountDocuments(ctx, query)
+
+	return Count, err
+}
+
+// QueryFindAndUpdate method
+func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collname string, queryFilter bson.M, setQuery bson.M, setOnInsertQuery bson.M) (int64, error) {
+	var err error
+	var count int64
+
+	updateQuery := bson.M{
+		"$set":         setQuery,
+		"$setOnInsert": setOnInsertQuery,
+	}
+
+	var updateOptions *options.FindOneAndUpdateOptions
+	updateOptions.SetReturnDocument(1)
+	updateOptions.SetUpsert(true)
+
+	insertResult := adaptor.Client.Database(adaptor.DBName).Collection(collname).FindOneAndUpdate(ctx, queryFilter, updateQuery, updateOptions)
+	fmt.Println(*insertResult)
+	return count, err
 }
 
 ///////////// PAYLOAD FILTER /////////////
@@ -262,3 +328,12 @@ func (adaptor *Adaptor) ParseOptions(payload Payload, options *options.FindOptio
 // 		fmt.Printf("Key: %v Value: %v\n", key, value)
 // 	}
 // }
+
+// GetDate method
+func (adaptor *Adaptor) GetDate() string {
+	Time := time.Now().UnixNano()
+	dateRune := []rune(strconv.Itoa(int(Time)))
+	parsedDate := string(dateRune[0:13])
+
+	return parsedDate
+}

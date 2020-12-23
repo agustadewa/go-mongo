@@ -15,6 +15,9 @@ func (P Parser) Parse(in interface{}, out interface{}, toJSON bool) {
 	var parsedPayload bson.M
 	var isParsed bool
 
+	fmt.Println("IN", in)
+	fmt.Println("OUT", out)
+
 	// parse to bson.M if <string>
 	switch in.(type) {
 	case string:
@@ -57,6 +60,9 @@ func (P Parser) Parse(in interface{}, out interface{}, toJSON bool) {
 			fmt.Println(err)
 		}
 	}
+
+	fmt.Println("IN", in)
+	fmt.Println("OUT", out)
 }
 
 // GrabOnKeyword Method
