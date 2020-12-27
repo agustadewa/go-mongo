@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"image"
-	"image/jpeg"
+	"image/png"
 	"io"
+	"log"
 	"math/rand"
 	"os"
 	"regexp"
@@ -21,9 +21,9 @@ type Tools struct{}
 // PrintPDF method
 func (tool Tools) PrintPDF(name, callSign, band, templatePath, outPath, fileType string) error {
 	pdf := gofpdf.New("L", "mm", "A4", "")
-	pdf.SetFontLocation("./public/TEMP/FONT")
+	pdf.SetFontLocation("./TEMP/FONT")
 	pdf.AddFont("ArchivoBlack-Regular", "", "ArchivoBlack-Regular.json")
-	pdf.SetFontLocation("./public/TEMP/FONT")
+	pdf.SetFontLocation("./TEMP/FONT")
 	pdf.AddFont("ATOMICCLOCKRADIO", "", "ATOMICCLOCKRADIO.json")
 
 	pdf.SetHeaderFunc(func() {
@@ -61,72 +61,86 @@ func (tool Tools) PrintPDF(name, callSign, band, templatePath, outPath, fileType
 // PrintPDF method
 func (tool Tools) PrintPDFV2(name, callSign, band, templatePath, fileType string, w io.Writer) error {
 	pdf := gofpdf.New("L", "mm", "A4", "")
-	pdf.SetFontLocation("./public/TEMP/FONT")
-	pdf.AddFont("ArchivoBlack-Regular", "", "ArchivoBlack-Regular.json")
-	pdf.SetFontLocation("./public/TEMP/FONT")
-	pdf.AddFont("ATOMICCLOCKRADIO", "", "ATOMICCLOCKRADIO.json")
+	pdf.SetFontLocation("./TEMP/FONT")
+	pdf.AddFont("OrangeTypewriter", "", "OrangeTypewriter.json")
+	pdf.SetFontLocation("./TEMP/FONT")
+	pdf.AddFont("Kanit-Bold", "", "Kanit-Bold.json")
 
 	pdf.SetHeaderFunc(func() {
 		// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
 		pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
 
-		pdf.SetFont("ArchivoBlack-Regular", "", 47)
-		pdf.SetXY(4, 91)
-		pdf.SetTextColor(12, 168, 149)
-		pdf.Cell(40, 10, callSign)
+		// CALL SIGN
+		pdf.SetFont("Kanit-Bold", "", 48)
+		pdf.SetXY(247, 80)
+		pdf.SetTextColor(0, 0, 0)
+		pdf.CellFormat(40, 10, callSign, "", 0, "R", false, 0, "")
 
-		pdf.SetFont("ArchivoBlack-Regular", "", 25)
-		pdf.SetXY(6, 105)
-		pdf.SetTextColor(12, 168, 149)
-		pdf.Cell(10, 10, name)
+		// NAME
+		pdf.SetFont("Kanit-Bold", "", 18)
+		pdf.SetXY(276, 95)
+		pdf.SetTextColor(0, 0, 0)
+		pdf.CellFormat(10, 10, name, "", 0, "R", false, 0, "")
 
-		pdf.SetFont("ATOMICCLOCKRADIO", "", 23)
-		pdf.SetTextColor(255, 255, 255)
+		// FREQUENCY
+		pdf.SetFont("OrangeTypewriter", "", 16)
+		pdf.SetTextColor(0, 0, 0)
 		if band == "40 m" {
-			pdf.SetXY(131, 43)
-			pdf.Cell(10, 10, "7.135")
+			pdf.SetXY(279, 23)
+			pdf.CellFormat(10, 10, "7.135 MHz", "", 0, "R", false, 0, "")
 		} else if band == "2 m" {
-			pdf.SetXY(119, 43)
-			pdf.Cell(10, 10, "145.240")
+			pdf.SetXY(279, 23)
+			pdf.CellFormat(10, 10, "145.240 MHz", "", 0, "R", false, 0, "")
 		}
 	})
 
 	err := pdf.Output(w)
 	if err != nil {
-		fmt.Println("ERRRORRR! ", err)
+		log.Println("error creating pdf:", err)
 	}
 	return err
 }
 
 // SaveImageFromB64 method
 func (tool Tools) SaveImageFromB64(b64 string, filePath string) error {
-	var err error
-
-	var unbased []byte
-	unbased, err = base64.StdEncoding.Strict().DecodeString(b64)
+	unbased, errDecode := base64.StdEncoding.Strict().DecodeString(b64)
+	if errDecode != nil {
+		fmt.Println(errDecode)
+	}
 
 	reader := bytes.NewReader(unbased)
-	var img image.Image
-	if img, err = jpeg.Decode(reader); err != nil {
-		panic("BAD JPG")
+
+	// Decode JPG
+	//img, errDecodeJpeg := jpeg.Decode(reader);
+	//if  errDecodeJpeg != nil {
+	//	panic("BAD JPG")
+	//}
+
+	// Decode PNG
+	img, errDecodePng := png.Decode(reader)
+	if errDecodePng != nil {
+		panic("BAD PNG")
 	}
 
-	// if img, err = png.Decode(reader); err != nil {
-	// 	panic("BAD PNG")
-	// }
-
-	var f *os.File
-	if f, err = os.Create(filePath); err != nil {
-		panic(err)
+	// Create File
+	file, errCreateFile := os.Create(filePath)
+	if errCreateFile != nil {
+		panic(errCreateFile)
 	}
-	defer f.Close()
+	defer file.Close()
 
-	opt := jpeg.Options{Quality: 30}
-	err = jpeg.Encode(f, img, &opt)
+	// Encode JPG
+	//jpgOpt := jpeg.Options{Quality: 30}
+	//errEncodeJpg = jpeg.Encode(f, img, &jpgOpt)
 
-	// err = png.Encode(f, img)
+	// Encode PNG
+	errEncodePng := png.Encode(file, img)
+	if errEncodePng != nil {
+		fmt.Println(errEncodePng)
+	}
 
-	return err
+	//return errEncodeJpg
+	return errEncodePng
 }
 
 // ReplaceRegex method

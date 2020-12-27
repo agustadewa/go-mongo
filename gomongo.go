@@ -74,11 +74,11 @@ type EventCallSign struct {
 	CertificateTemplate string       `bson:"certificate_template" json:"certificate_template"`
 	CertificateFormat   string       `bson:"certificate_format" json:"certificate_format"`
 	Description         string       `bson:"description" json:"description"`
-	Date                string       `bson:"date" json:"date"`
-	Name                string       `bson:"name" json:"name"`
-	IsActive            bool         `bson:"is_active" json:"is_active"`
-	IsHidden            bool         `bson:"is_hidden" json:"is_hidden"`
-	CityID              int32        `bson:"city_id" json:"city_id"`
+	//Date                string       `bson:"date" json:"date"`
+	Name     string `bson:"name" json:"name"`
+	IsActive bool   `bson:"is_active" json:"is_active"`
+	IsHidden bool   `bson:"is_hidden" json:"is_hidden"`
+	CityID   int32  `bson:"city_id" json:"city_id"`
 }
 
 // Adaptor Type
@@ -104,7 +104,7 @@ func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
 }
 
 // QueryUpdateDocument method
-func (adaptor *Adaptor) QueryUpdateDocument(ctx context.Context, collname string, filterQuery bson.M, updateQuery bson.M) error {
+func (adaptor *Adaptor) QueryUpdateMany(ctx context.Context, collname string, filterQuery bson.M, updateQuery bson.M) error {
 	var err error
 	fmt.Println("filterQuery", filterQuery)
 	fmt.Println("updateQuery", updateQuery)
@@ -155,16 +155,14 @@ func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuer
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	errFinding := collection.FindOne(ctx, query).Decode(&received)
 	jsonBytes, _ := bson.MarshalJSON(&received)
-	// fmt.Println("JSONBYTES", string(jsonBytes))
 
 	return jsonBytes, errFinding
 }
 
 // QueryFindV2 query find to mongodb
-func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, byteQuery interface{}, result interface{}) error {
-
+func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, query interface{}, result interface{}) error {
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
-	return collection.FindOne(ctx, byteQuery).Decode(result)
+	return collection.FindOne(ctx, query).Decode(result)
 }
 
 // QueryFindMany query find many to mongodb
@@ -187,6 +185,19 @@ func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byte
 	results, err = bson.MarshalJSON(received)
 
 	return results, err
+}
+
+// QueryFindManyV2 query find many to mongodb
+func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, findOptions *options.FindOptions, query interface{}, result []bson.M) error {
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	cursor, _ := collection.Find(ctx, query, findOptions)
+
+	err := cursor.All(ctx, result)
+	if err != nil {
+		panic(err)
+	}
+
+	return err
 }
 
 // QueryCount query find to mongodb
@@ -216,6 +227,66 @@ func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collname string,
 	insertResult := adaptor.Client.Database(adaptor.DBName).Collection(collname).FindOneAndUpdate(ctx, queryFilter, updateQuery, updateOptions)
 	fmt.Println(*insertResult)
 	return count, err
+}
+
+// QueryFindAndUpdateV2 method
+// updateQuery := bson.M{
+//		"$set":         setQuery,
+//		"$setOnInsert": setOnInsertQuery,
+//	}
+func (adaptor *Adaptor) QueryFindAndUpdateV2(ctx context.Context, collname string, filterQuery interface{}, updateQuery interface{}, result *bson.M) error {
+	var updateOptions options.FindOneAndUpdateOptions
+	updateOptions.SetReturnDocument(1)
+	updateOptions.SetUpsert(true)
+
+	err := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		FindOneAndUpdate(ctx, filterQuery, updateQuery, &updateOptions).
+		Decode(&result)
+
+	fmt.Println("LAST INSERTED -->", result)
+
+	return err
+}
+
+//QueryRemoveOne method
+func (adaptor *Adaptor) QueryRemoveOne(ctx context.Context, collname string, queryFilter interface{}) (int64, error) {
+	delResult, err := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		DeleteOne(ctx, queryFilter)
+
+	return delResult.DeletedCount, err
+}
+
+// QueryRemoveMany method
+func (adaptor *Adaptor) QueryRemoveMany(ctx context.Context, collname string, queryFilter interface{}) (int64, error) {
+	delResult, err := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		DeleteMany(ctx, queryFilter)
+
+	return delResult.DeletedCount, err
+}
+
+// QueryConfirm method
+func (adaptor *Adaptor) QueryConfirm(ctx context.Context, collname, key, value string) bool {
+	queryResult := bson.M{}
+	errFindKey := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		FindOne(ctx, bson.M{"key": key}).
+		Decode(&queryResult)
+	if errFindKey != nil {
+		panic(errFindKey)
+	}
+
+	if queryResult["value"].(string) == value {
+		return true
+	} else {
+		return false
+	}
 }
 
 ///////////// PAYLOAD FILTER /////////////
@@ -301,17 +372,6 @@ func (adaptor *Adaptor) ParseOptions(payload Payload, options *options.FindOptio
 // 		result = append(result, subIdentity)
 // 	}
 // 	return result
-// }
-
-// //DeleteIdentity method
-// func (adaptor *Adaptor) DeleteIdentity(ctx context.Context, name string) {
-// 	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
-// 	delResult, err := collection.DeleteOne(ctx, bson.M{"name": name})
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-//
-// 	fmt.Println(delResult)
 // }
 
 // //DeleteCollection method
