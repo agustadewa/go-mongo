@@ -25,6 +25,7 @@ type FindOptions struct {
 	Projection interface{} `bson:"projection",omitempy json:"projection",omitempy`
 	Sort       interface{} `bson:"sort",omitempy json:"sort",omitempy`
 	Skip       int64       `bson:"skip",omitempy json:"skip",omitempy`
+	Pagination interface{} `bson:"pagination",omitempy json:"pagination",omitempy`
 }
 
 //Identity type
