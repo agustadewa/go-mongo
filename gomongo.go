@@ -147,6 +147,20 @@ func (adaptor *Adaptor) QueryInsert(ctx context.Context, collname string, byteQu
 	return insertResult, errorInserting
 }
 
+// QueryInsertV2 Query Insert to mongodb
+func (adaptor *Adaptor) QueryInsertV2(ctx context.Context, collname string, query interface{}, result interface{}) error {
+	result, errorInserting := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		InsertOne(ctx, query)
+
+	if errorInserting != nil {
+		log.Println(errorInserting)
+	}
+
+	return errorInserting
+}
+
 // QueryFind query find to mongodb
 func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuery []byte) ([]byte, error) {
 	var query bson.M
@@ -189,7 +203,7 @@ func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byte
 }
 
 // QueryFindManyV2 query find many to mongodb
-func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, findOptions *options.FindOptions, query interface{}, result []bson.M) error {
+func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, findOptions *options.FindOptions, query interface{}, result interface{}) error {
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	cursor, _ := collection.Find(ctx, query, findOptions)
 
