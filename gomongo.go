@@ -36,6 +36,7 @@ type Identity struct {
 	EventID           string       `bson:"event_id" json:"event_id"`
 	Name              string       `bson:"name" json:"name"`
 	IsFulfilled       bool         `bson:"is_fulfilled" json:"is_fulfilled"`
+	DownloadCount     int32        `bson:"download_count" json:"download_count"`
 	// Date              Date         `bson:"date" json:"date"`
 }
 
