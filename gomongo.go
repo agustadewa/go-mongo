@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/mgo.v2/bson"
@@ -30,13 +31,15 @@ type FindOptions struct {
 
 //Identity type
 type Identity struct {
-	Attributes        []Attributes `bson:"attributes,omitempty" json:"attributes,omitempty"`
-	CertificateNumber string       `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
-	CallSign          string       `bson:"call_sign" json:"call_sign"`
-	EventID           string       `bson:"event_id" json:"event_id"`
-	Name              string       `bson:"name" json:"name"`
-	IsFulfilled       bool         `bson:"is_fulfilled" json:"is_fulfilled"`
-	DownloadCount     int32        `bson:"download_count" json:"download_count"`
+	ID                primitive.ObjectID `bson:"_id,ommitempty" json:"_id,ommitempty"`
+	Attributes        []Attributes       `bson:"attributes,omitempty" json:"attributes,omitempty"`
+	CertificateNumber string             `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
+	CallSign          string             `bson:"call_sign" json:"call_sign"`
+	EventID           string             `bson:"event_id" json:"event_id"`
+	EventName         string             `bson:"event_name,omitempty" json:"event_name,omitempty"`
+	Name              string             `bson:"name" json:"name"`
+	IsFulfilled       bool               `bson:"is_fulfilled" json:"is_fulfilled"`
+	DownloadCount     int32              `bson:"download_count" json:"download_count"`
 	// Date              Date         `bson:"date" json:"date"`
 }
 
@@ -61,26 +64,28 @@ type Image struct {
 	B64      string `bson:"b64" json:"b64"`
 }
 
-// AddCallSignPayload type
+// CallSignPayload type
 type CallSignPayload struct {
 	Attributes        Attributes `bson:"attributes" json:"attributes"`
 	CertificateNumber string     `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
 	CallSign          string     `bson:"call_sign" json:"call_sign"`
 	EventID           string     `bson:"event_id" json:"event_id"`
+	EventName         string     `bson:"event_name,omitempty" json:"event_name,omitempty"`
 	Name              string     `bson:"name" json:"name"`
 }
 
 // EventCallSign type
 type EventCallSign struct {
-	Attributes          []Attributes `bson:"attributes" json:"attributes"`
-	CertificateTemplate string       `bson:"certificate_template" json:"certificate_template"`
-	CertificateFormat   string       `bson:"certificate_format" json:"certificate_format"`
-	Description         string       `bson:"description" json:"description"`
+	Attributes          []Attributes       `bson:"attributes" json:"attributes"`
+	CertificateTemplate string             `bson:"certificate_template" json:"certificate_template"`
+	CertificateFormat   string             `bson:"certificate_format" json:"certificate_format"`
+	Description         string             `bson:"description" json:"description"`
+	Name                string             `bson:"name" json:"name"`
+	ID                  primitive.ObjectID `bson:"_id,ommitempty" json:"_id,ommitempty"`
+	IsActive            bool               `bson:"is_active" json:"is_active"`
+	IsHidden            bool               `bson:"is_hidden" json:"is_hidden"`
+	CityID              int32              `bson:"city_id" json:"city_id"`
 	//Date                string       `bson:"date" json:"date"`
-	Name     string `bson:"name" json:"name"`
-	IsActive bool   `bson:"is_active" json:"is_active"`
-	IsHidden bool   `bson:"is_hidden" json:"is_hidden"`
-	CityID   int32  `bson:"city_id" json:"city_id"`
 }
 
 // Adaptor Type

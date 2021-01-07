@@ -3,17 +3,25 @@ package tools
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"image/png"
 	"io"
 	"log"
 	"math/rand"
 	"os"
+	"reflect"
 	"regexp"
 	"time"
 
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator"
 	"github.com/jung-kurt/gofpdf"
+	validatorv9 "gopkg.in/go-playground/validator.v9"
 )
+
+var validate *validator.Validate
 
 // Tools type
 type Tools struct{}
@@ -159,4 +167,63 @@ func (tool Tools) RNDString(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+// BindValidate function
+func BindValidate(o interface{}) error {
+	ginValidate, ok := binding.Validator.Engine().(*validatorv9.Validate)
+	if !ok {
+		err := binding.Validator.ValidateStruct(o)
+		if err != nil {
+			return err
+		}
+		validate = validator.New()
+		err = validate.Struct(o)
+
+		return err
+	}
+
+	err := ginValidate.Struct(o)
+	if err != nil {
+		return err
+	}
+
+	validate = validator.New()
+	err = validate.Struct(o)
+
+	return err
+}
+
+// PairValues function
+func PairValues(i, o interface{}) error {
+	if i == nil {
+		return errors.New("error while pair values, values is nil")
+	}
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(b, &o)
+	if err != nil {
+		return err
+	}
+
+	//check type of o
+	r := reflect.ValueOf(o)
+	if r.Kind() == reflect.Ptr && !r.IsNil() {
+		r = r.Elem()
+	}
+	if r.Kind() != reflect.Struct && r.Kind() != reflect.Interface {
+
+		return nil
+	}
+
+	//validate struct :
+	err = BindValidate(o)
+	if err != nil {
+
+		return err
+	}
+
+	return nil
 }
