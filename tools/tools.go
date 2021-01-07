@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/agustadewa/gomongo"
 	"image/png"
 	"io"
 	"log"
@@ -66,7 +67,7 @@ func (tool Tools) PrintPDF(name, callSign, band, templatePath, outPath, fileType
 	return err
 }
 
-// PrintPDF method
+// PrintPDFV2 method
 func (tool Tools) PrintPDFV2(name, callSign, band, templatePath, fileType string, w io.Writer) error {
 	pdf := gofpdf.New("L", "mm", "A4", "")
 	pdf.SetFontLocation("./TEMP/FONT")
@@ -101,6 +102,52 @@ func (tool Tools) PrintPDFV2(name, callSign, band, templatePath, fileType string
 			pdf.CellFormat(10, 10, "145.240 MHz", "", 0, "R", false, 0, "")
 		}
 	})
+
+	err := pdf.Output(w)
+	if err != nil {
+		log.Println("error creating pdf:", err)
+	}
+	return err
+}
+
+// PrintPDFV3 method
+func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, fileType string, w io.Writer, imageCertTemplate gomongo.ImageCertTemplate) error {
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CallSign.FontDir)
+	pdf.AddFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.CallSign.FontName))
+	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.IdentityName.FontDir)
+	pdf.AddFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.IdentityName.FontName))
+	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Frequency.FontDir)
+	pdf.AddFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Frequency.FontName))
+	handler := func(imageCertTemplate gomongo.ImageCertTemplate) func() {
+		return func() {
+			// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
+			pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
+
+			// CALL SIGN
+			pdf.SetFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", imageCertTemplate.TemplateProperties.CallSign.FontSize)
+			pdf.SetXY(imageCertTemplate.TemplateProperties.CallSign.TextPosition.X, imageCertTemplate.TemplateProperties.CallSign.TextPosition.Y)
+			pdf.SetTextColor(imageCertTemplate.TemplateProperties.CallSign.FontColor.R, imageCertTemplate.TemplateProperties.CallSign.FontColor.G, imageCertTemplate.TemplateProperties.CallSign.FontColor.B)
+			pdf.CellFormat(40, 10, callSign, "", 0, imageCertTemplate.TemplateProperties.CallSign.TextAlign, false, 0, "")
+
+			// NAME
+			pdf.SetFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", imageCertTemplate.TemplateProperties.IdentityName.FontSize)
+			pdf.SetXY(imageCertTemplate.TemplateProperties.IdentityName.TextPosition.X, imageCertTemplate.TemplateProperties.IdentityName.TextPosition.Y)
+			pdf.SetTextColor(imageCertTemplate.TemplateProperties.IdentityName.FontColor.R, imageCertTemplate.TemplateProperties.IdentityName.FontColor.G, imageCertTemplate.TemplateProperties.IdentityName.FontColor.B)
+			pdf.CellFormat(10, 10, name, "", 0, imageCertTemplate.TemplateProperties.IdentityName.TextAlign, false, 0, "")
+
+			// FREQUENCY
+			pdf.SetFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", imageCertTemplate.TemplateProperties.Frequency.FontSize)
+			pdf.SetTextColor(imageCertTemplate.TemplateProperties.Frequency.FontColor.R, imageCertTemplate.TemplateProperties.Frequency.FontColor.G, imageCertTemplate.TemplateProperties.Frequency.FontColor.B)
+			pdf.SetXY(imageCertTemplate.TemplateProperties.Frequency.TextPosition.X, imageCertTemplate.TemplateProperties.Frequency.TextPosition.Y)
+			if band == "40 m" {
+				pdf.CellFormat(10, 10, frequency, "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+			} else if band == "2 m" {
+				pdf.CellFormat(10, 10, frequency, "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+			}
+		}
+	}
+	pdf.SetHeaderFunc(handler(imageCertTemplate))
 
 	err := pdf.Output(w)
 	if err != nil {

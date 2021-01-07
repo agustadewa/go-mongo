@@ -17,21 +17,21 @@ import (
 type Payload struct {
 	Kind    string      `bson:"kind" json:"kind"`
 	Values  interface{} `bson:"values" json:"values"`
-	Options FindOptions `bson:"options",omitempy json:"options",omitempy`
+	Options FindOptions `bson:"options,omitempty" json:"options,omitempty"`
 }
 
 //FindOptions type
 type FindOptions struct {
-	Limit      int64       `bson:"limit",omitempy json:"limit",omitempy`
-	Projection interface{} `bson:"projection",omitempy json:"projection",omitempy`
-	Sort       interface{} `bson:"sort",omitempy json:"sort",omitempy`
-	Skip       int64       `bson:"skip",omitempy json:"skip",omitempy`
-	Pagination interface{} `bson:"pagination",omitempy json:"pagination",omitempy`
+	Limit      int64       `bson:"limit,omitempty" json:"limit,omitempty"`
+	Projection interface{} `bson:"projection,omitempty" json:"projection,omitempty"`
+	Sort       interface{} `bson:"sort,omitempty" json:"sort,omitempty"`
+	Skip       int64       `bson:"skip,omitempty" json:"skip,omitempty"`
+	Pagination interface{} `bson:"pagination,omitempty" json:"pagination,omitempty"`
 }
 
 //Identity type
 type Identity struct {
-	ID                primitive.ObjectID `bson:"_id,ommitempty" json:"_id,ommitempty"`
+	ID                primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	Attributes        []Attributes       `bson:"attributes,omitempty" json:"attributes,omitempty"`
 	CertificateNumber string             `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
 	CallSign          string             `bson:"call_sign" json:"call_sign"`
@@ -64,6 +64,37 @@ type Image struct {
 	B64      string `bson:"b64" json:"b64"`
 }
 
+type RGB struct {
+	R int `bson:"r" json:"r"`
+	G int `bson:"g" json:"g"`
+	B int `bson:"b" json:"b"`
+}
+
+type TextPosition struct {
+	X float64 `bson:"x" json:"x"`
+	Y float64 `bson:"y" json:"y"`
+}
+
+type TemplateProperty struct {
+	TextPosition TextPosition `bson:"text_position" json:"text_position"`
+	TextAlign    string       `bson:"text_align" json:"text_align"`
+	FontColor    RGB          `bson:"font_color" json:"font_color"`
+	FontName     string       `bson:"font_name" json:"font_name"`
+	FontSize     float64      `bson:"font_size" json:"font_size"`
+	FontDir      string       `bson:"font_dir" json:"font_dir"`
+}
+
+// ImageCertTemplate type
+type ImageCertTemplate struct {
+	FileName           string `bson:"file_name" json:"file_name"`
+	B64                string `bson:"b64" json:"b64"`
+	TemplateProperties struct {
+		CallSign     TemplateProperty `bson:"call_sign" json:"call_sign"`
+		IdentityName TemplateProperty `bson:"identity_name" json:"identity_name"`
+		Frequency    TemplateProperty `bson:"frequency" json:"frequency"`
+	} `bson:"template_properties" json:"template_properties"`
+}
+
 // CallSignPayload type
 type CallSignPayload struct {
 	Attributes        Attributes `bson:"attributes" json:"attributes"`
@@ -81,7 +112,7 @@ type EventCallSign struct {
 	CertificateFormat   string             `bson:"certificate_format" json:"certificate_format"`
 	Description         string             `bson:"description" json:"description"`
 	Name                string             `bson:"name" json:"name"`
-	ID                  primitive.ObjectID `bson:"_id,ommitempty" json:"_id,ommitempty"`
+	ID                  primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	IsActive            bool               `bson:"is_active" json:"is_active"`
 	IsHidden            bool               `bson:"is_hidden" json:"is_hidden"`
 	CityID              int32              `bson:"city_id" json:"city_id"`
