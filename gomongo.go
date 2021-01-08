@@ -198,6 +198,20 @@ func (adaptor *Adaptor) QueryInsertV2(ctx context.Context, collname string, quer
 	return errorInserting
 }
 
+// QueryInsertV2 Query Insert to mongodb
+func (adaptor *Adaptor) QueryInsertV3(ctx context.Context, collname string, query interface{}) (*mongo.InsertOneResult, error) {
+	result, errorInserting := adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(collname).
+		InsertOne(ctx, query)
+
+	if errorInserting != nil {
+		log.Println(errorInserting)
+	}
+
+	return result, errorInserting
+}
+
 // QueryFind query find to mongodb
 func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuery []byte) ([]byte, error) {
 	var query bson.M
