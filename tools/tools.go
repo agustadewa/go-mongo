@@ -140,10 +140,10 @@ func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, file
 			pdf.SetFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", imageCertTemplate.TemplateProperties.Frequency.FontSize)
 			pdf.SetTextColor(imageCertTemplate.TemplateProperties.Frequency.FontColor.R, imageCertTemplate.TemplateProperties.Frequency.FontColor.G, imageCertTemplate.TemplateProperties.Frequency.FontColor.B)
 			pdf.SetXY(imageCertTemplate.TemplateProperties.Frequency.TextPosition.X, imageCertTemplate.TemplateProperties.Frequency.TextPosition.Y)
-			if band == "40 m" {
-				pdf.CellFormat(10, 10, frequency, "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
-			} else if band == "2 m" {
-				pdf.CellFormat(10, 10, frequency, "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+			if band == "40 m" || band == "4m" {
+				pdf.CellFormat(10, 10, fmt.Sprintf("%s - %s", frequency, band), "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+			} else if band == "2 m" || band == "2m" {
+				pdf.CellFormat(10, 10, fmt.Sprintf("%s - %s", frequency, band), "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
 			}
 		}
 	}
