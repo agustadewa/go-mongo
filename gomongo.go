@@ -56,6 +56,8 @@ type Attributes struct {
 	Band      string `bson:"band" json:"band"`
 	Frequency string `bson:"frequency" json:"frequency"`
 	Date      string `bson:"date" json:"date"`
+	RST int64 `bson:"rst,omitempty" json:"rst,omitempty"`
+	Mode string `bson:"mode,omitempty" json:"mode,omitempty"`
 }
 
 // Image type
@@ -226,9 +228,9 @@ func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuer
 }
 
 // QueryFindV2 query find to mongodb
-func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, query interface{}, result interface{}) error {
+func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, findOneOptions *options.FindOneOptions ,query interface{}, result interface{}) error {
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
-	return collection.FindOne(ctx, query).Decode(result)
+	return collection.FindOne(ctx, query, findOneOptions).Decode(result)
 }
 
 // QueryFindMany query find many to mongodb
