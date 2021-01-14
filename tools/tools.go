@@ -155,8 +155,8 @@ func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, file
 
 
 // PrintPDFV4 method
-func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType string, w io.Writer, imageCertTemplate gomongo.ImageCertTemplate) error {
-	identityAttribute := identity.Attributes[0]
+func (tool Tools) PrintPDFV4(identity gomongo.Identity, bandIndex int, templatePath, fileType string, w io.Writer, imageCertTemplate gomongo.ImageCertTemplate) error {
+	identityAttribute := identity.Attributes[bandIndex]
 
 	pdf := gofpdf.New("L", "mm", "A4", "")
 	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CallSign.FontDir)
@@ -193,8 +193,8 @@ func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType s
 				fullDate := time.Unix( numericFullDate/1000, 0).UTC()
 
 				// DATE
-				simpleDate:= fullDate.Format("2006-01-02")
-				fmt.Println(simpleDate)
+				simpleDate:= fullDate.Format("02 Jan 2006")
+				//fmt.Println(numericFullDate, simpleDate)
 
 				pdf.SetFont(imageCertTemplate.TemplateProperties.Date.FontName, "", imageCertTemplate.TemplateProperties.Date.FontSize)
 				pdf.SetXY(imageCertTemplate.TemplateProperties.Date.TextPosition.X, imageCertTemplate.TemplateProperties.Date.TextPosition.Y)
@@ -203,8 +203,8 @@ func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType s
 				pdf.CellFormat(10, 10, simpleDate, "", 0, imageCertTemplate.TemplateProperties.Date.TextAlign, false, 0, "")
 
 				// UTC
-				simpleUTCTime:= fullDate.Format("11:01")
-				fmt.Println(simpleUTCTime)
+				simpleUTCTime:= fullDate.Format("15:04")
+				//fmt.Println(simpleUTCTime)
 
 				pdf.SetFont(imageCertTemplate.TemplateProperties.UTC.FontName, "", imageCertTemplate.TemplateProperties.UTC.FontSize)
 				pdf.SetXY(imageCertTemplate.TemplateProperties.UTC.TextPosition.X, imageCertTemplate.TemplateProperties.UTC.TextPosition.Y)
@@ -213,7 +213,7 @@ func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType s
 				pdf.CellFormat(10, 10, simpleUTCTime, "", 0, imageCertTemplate.TemplateProperties.UTC.TextAlign, false, 0, "")
 
 				// BAND
-				fmt.Println(identityAttribute.Band)
+				//fmt.Println(identityAttribute.Band)
 
 				pdf.SetFont(imageCertTemplate.TemplateProperties.Band.FontName, "", imageCertTemplate.TemplateProperties.Band.FontSize)
 				pdf.SetXY(imageCertTemplate.TemplateProperties.Band.TextPosition.X, imageCertTemplate.TemplateProperties.Band.TextPosition.Y)
@@ -222,7 +222,7 @@ func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType s
 				pdf.CellFormat(10, 10, identityAttribute.Band, "", 0, imageCertTemplate.TemplateProperties.Band.TextAlign, false, 0, "")
 
 				// MODE
-				fmt.Println(identityAttribute.Mode)
+				//fmt.Println(identityAttribute.Mode)
 
 				pdf.SetFont(imageCertTemplate.TemplateProperties.Mode.FontName, "", imageCertTemplate.TemplateProperties.Mode.FontSize)
 				pdf.SetXY(imageCertTemplate.TemplateProperties.Mode.TextPosition.X, imageCertTemplate.TemplateProperties.Mode.TextPosition.Y)
@@ -231,7 +231,7 @@ func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType s
 				pdf.CellFormat(10, 10, identityAttribute.Mode, "", 0, imageCertTemplate.TemplateProperties.Mode.TextAlign, false, 0, "")
 
 				// RST
-				fmt.Println(identityAttribute.RST)
+				//fmt.Println(identityAttribute.RST)
 
 				pdf.SetFont(imageCertTemplate.TemplateProperties.RST.FontName, "", imageCertTemplate.TemplateProperties.RST.FontSize)
 				pdf.SetXY(imageCertTemplate.TemplateProperties.RST.TextPosition.X, imageCertTemplate.TemplateProperties.RST.TextPosition.Y)
