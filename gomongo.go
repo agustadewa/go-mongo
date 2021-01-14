@@ -55,8 +55,8 @@ type Date struct {
 type Attributes struct {
 	Band      string `bson:"band" json:"band"`
 	Frequency string `bson:"frequency" json:"frequency"`
-	Date      string `bson:"date" json:"date"`
-	RST int64 `bson:"rst,omitempty" json:"rst,omitempty"`
+	Date      string `bson:"date,omitempty" json:"date,omitempty"`
+	RST string `bson:"rst,omitempty" json:"rst,omitempty"`
 	Mode string `bson:"mode,omitempty" json:"mode,omitempty"`
 }
 
@@ -91,9 +91,16 @@ type ImageCertTemplate struct {
 	FileName           string `bson:"file_name" json:"file_name"`
 	B64                string `bson:"b64" json:"b64"`
 	TemplateProperties struct {
+		FullTemplate bool `bson:"full_template" json:"full_template"`
 		CallSign     TemplateProperty `bson:"call_sign" json:"call_sign"`
 		IdentityName TemplateProperty `bson:"identity_name" json:"identity_name"`
 		Frequency    TemplateProperty `bson:"frequency" json:"frequency"`
+		RST    TemplateProperty `bson:"rst, omitempty" json:"rst,omitempty"`
+		Mode    TemplateProperty `bson:"mode, omitempty" json:"mode,omitempty"`
+		UTC    TemplateProperty `bson:"utc, omitempty" json:"utc,omitempty"`
+		Date TemplateProperty `bson:"date, omitempty" json:"date,omitempty"`
+		Band TemplateProperty `bson:"band, omitempty" json:"band,omitempty"`
+
 	} `bson:"template_properties" json:"template_properties"`
 }
 
@@ -105,6 +112,13 @@ type CallSignPayload struct {
 	EventID           string     `bson:"event_id" json:"event_id"`
 	EventName         string     `bson:"event_name,omitempty" json:"event_name,omitempty"`
 	Name              string     `bson:"name" json:"name"`
+	IsFulfilled       bool       `bson:"is_fulfilled,omitempty" json:"is_fulfilled,omitempty"`
+	DownloadCount     int32      `bson:"download_count,omitempty" json:"download_count,omitempty"`
+}
+
+// ManyCallSignPayload type
+type ManyCallSignPayload struct {
+	Payload []CallSignPayload `bson:"payload" json:"payload"`
 }
 
 // EventCallSign type

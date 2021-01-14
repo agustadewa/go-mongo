@@ -14,6 +14,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin/binding"
@@ -141,6 +142,104 @@ func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, file
 			pdf.SetTextColor(imageCertTemplate.TemplateProperties.Frequency.FontColor.R, imageCertTemplate.TemplateProperties.Frequency.FontColor.G, imageCertTemplate.TemplateProperties.Frequency.FontColor.B)
 			pdf.SetXY(imageCertTemplate.TemplateProperties.Frequency.TextPosition.X, imageCertTemplate.TemplateProperties.Frequency.TextPosition.Y)
 			pdf.CellFormat(10, 10, fmt.Sprintf("%s - %s", frequency, band), "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+		}
+	}
+	pdf.SetHeaderFunc(handler(imageCertTemplate))
+
+	err := pdf.Output(w)
+	if err != nil {
+		log.Println("error creating pdf:", err)
+	}
+	return err
+}
+
+
+// PrintPDFV4 method
+func (tool Tools) PrintPDFV4(identity gomongo.Identity, templatePath, fileType string, w io.Writer, imageCertTemplate gomongo.ImageCertTemplate) error {
+	identityAttribute := identity.Attributes[0]
+
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CallSign.FontDir)
+	pdf.AddFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.CallSign.FontName))
+	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.IdentityName.FontDir)
+	pdf.AddFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.IdentityName.FontName))
+	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Frequency.FontDir)
+	pdf.AddFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Frequency.FontName))
+	handler := func(imageCertTemplate gomongo.ImageCertTemplate) func() {
+		return func() {
+			// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
+			pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
+
+			// CALL SIGN
+			pdf.SetFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", imageCertTemplate.TemplateProperties.CallSign.FontSize)
+			pdf.SetXY(imageCertTemplate.TemplateProperties.CallSign.TextPosition.X, imageCertTemplate.TemplateProperties.CallSign.TextPosition.Y)
+			pdf.SetTextColor(imageCertTemplate.TemplateProperties.CallSign.FontColor.R, imageCertTemplate.TemplateProperties.CallSign.FontColor.G, imageCertTemplate.TemplateProperties.CallSign.FontColor.B)
+			pdf.CellFormat(40, 10, identity.CallSign, "", 0, imageCertTemplate.TemplateProperties.CallSign.TextAlign, false, 0, "")
+
+			// NAME
+			pdf.SetFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", imageCertTemplate.TemplateProperties.IdentityName.FontSize)
+			pdf.SetXY(imageCertTemplate.TemplateProperties.IdentityName.TextPosition.X, imageCertTemplate.TemplateProperties.IdentityName.TextPosition.Y)
+			pdf.SetTextColor(imageCertTemplate.TemplateProperties.IdentityName.FontColor.R, imageCertTemplate.TemplateProperties.IdentityName.FontColor.G, imageCertTemplate.TemplateProperties.IdentityName.FontColor.B)
+			pdf.CellFormat(10, 10, identity.Name, "", 0, imageCertTemplate.TemplateProperties.IdentityName.TextAlign, false, 0, "")
+
+			// FREQUENCY
+			pdf.SetFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", imageCertTemplate.TemplateProperties.Frequency.FontSize)
+			pdf.SetTextColor(imageCertTemplate.TemplateProperties.Frequency.FontColor.R, imageCertTemplate.TemplateProperties.Frequency.FontColor.G, imageCertTemplate.TemplateProperties.Frequency.FontColor.B)
+			pdf.SetXY(imageCertTemplate.TemplateProperties.Frequency.TextPosition.X, imageCertTemplate.TemplateProperties.Frequency.TextPosition.Y)
+			pdf.CellFormat(10, 10, fmt.Sprintf("%s - %s", identityAttribute.Frequency, identityAttribute.Band), "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+
+			if imageCertTemplate.TemplateProperties.FullTemplate {
+				numericFullDate, _ := strconv.ParseInt(identityAttribute.Date, 10, 64)
+				fullDate := time.Unix( numericFullDate/1000, 0).UTC()
+
+				// DATE
+				simpleDate:= fullDate.Format("2006-01-02")
+				fmt.Println(simpleDate)
+
+				pdf.SetFont(imageCertTemplate.TemplateProperties.Date.FontName, "", imageCertTemplate.TemplateProperties.Date.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.Date.TextPosition.X, imageCertTemplate.TemplateProperties.Date.TextPosition.Y)
+				dateFontColor := imageCertTemplate.TemplateProperties.Date.FontColor
+				pdf.SetTextColor(dateFontColor.R, dateFontColor.G, dateFontColor.B)
+				pdf.CellFormat(10, 10, simpleDate, "", 0, imageCertTemplate.TemplateProperties.Date.TextAlign, false, 0, "")
+
+				// UTC
+				simpleUTCTime:= fullDate.Format("11:01")
+				fmt.Println(simpleUTCTime)
+
+				pdf.SetFont(imageCertTemplate.TemplateProperties.UTC.FontName, "", imageCertTemplate.TemplateProperties.UTC.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.UTC.TextPosition.X, imageCertTemplate.TemplateProperties.UTC.TextPosition.Y)
+				utcFontColor := imageCertTemplate.TemplateProperties.UTC.FontColor
+				pdf.SetTextColor(utcFontColor.R, utcFontColor.G, utcFontColor.B)
+				pdf.CellFormat(10, 10, simpleUTCTime, "", 0, imageCertTemplate.TemplateProperties.UTC.TextAlign, false, 0, "")
+
+				// BAND
+				fmt.Println(identityAttribute.Band)
+
+				pdf.SetFont(imageCertTemplate.TemplateProperties.Band.FontName, "", imageCertTemplate.TemplateProperties.Band.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.Band.TextPosition.X, imageCertTemplate.TemplateProperties.Band.TextPosition.Y)
+				bandFontColor := imageCertTemplate.TemplateProperties.Band.FontColor
+				pdf.SetTextColor(bandFontColor.R, bandFontColor.G, bandFontColor.B)
+				pdf.CellFormat(10, 10, identityAttribute.Band, "", 0, imageCertTemplate.TemplateProperties.Band.TextAlign, false, 0, "")
+
+				// MODE
+				fmt.Println(identityAttribute.Mode)
+
+				pdf.SetFont(imageCertTemplate.TemplateProperties.Mode.FontName, "", imageCertTemplate.TemplateProperties.Mode.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.Mode.TextPosition.X, imageCertTemplate.TemplateProperties.Mode.TextPosition.Y)
+				modeFontColor := imageCertTemplate.TemplateProperties.Mode.FontColor
+				pdf.SetTextColor(modeFontColor.R, modeFontColor.G, modeFontColor.B)
+				pdf.CellFormat(10, 10, identityAttribute.Mode, "", 0, imageCertTemplate.TemplateProperties.Mode.TextAlign, false, 0, "")
+
+				// RST
+				fmt.Println(identityAttribute.RST)
+
+				pdf.SetFont(imageCertTemplate.TemplateProperties.RST.FontName, "", imageCertTemplate.TemplateProperties.RST.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.RST.TextPosition.X, imageCertTemplate.TemplateProperties.RST.TextPosition.Y)
+				rstFontColor := imageCertTemplate.TemplateProperties.RST.FontColor
+				pdf.SetTextColor(rstFontColor.R, rstFontColor.G, rstFontColor.B)
+				pdf.CellFormat(10, 10,  identityAttribute.RST, "", 0, imageCertTemplate.TemplateProperties.RST.TextAlign, false, 0, "")
+
+			}
 		}
 	}
 	pdf.SetHeaderFunc(handler(imageCertTemplate))
