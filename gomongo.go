@@ -2,144 +2,25 @@ package gomongo
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"gitlab.com/yosiaagustadewa/qsl-service/models"
 	"log"
 	"strconv"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Payload type
-type Payload struct {
-	Kind    string      `bson:"kind" json:"kind"`
-	Values  interface{} `bson:"values" json:"values"`
-	Options FindOptions `bson:"options,omitempty" json:"options,omitempty"`
-}
-
-//FindOptions type
-type FindOptions struct {
-	Limit      int64       `bson:"limit,omitempty" json:"limit,omitempty"`
-	Projection interface{} `bson:"projection,omitempty" json:"projection,omitempty"`
-	Sort       interface{} `bson:"sort,omitempty" json:"sort,omitempty"`
-	Skip       int64       `bson:"skip,omitempty" json:"skip,omitempty"`
-	Pagination interface{} `bson:"pagination,omitempty" json:"pagination,omitempty"`
-}
-
-//Identity type
-type Identity struct {
-	ID                primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	Attributes        []Attributes       `bson:"attributes,omitempty" json:"attributes,omitempty"`
-	CertificateNumber string             `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
-	CallSign          string             `bson:"call_sign" json:"call_sign"`
-	EventID           string             `bson:"event_id" json:"event_id"`
-	EventName         string             `bson:"event_name,omitempty" json:"event_name,omitempty"`
-	Name              string             `bson:"name" json:"name"`
-	IsFulfilled       bool               `bson:"is_fulfilled" json:"is_fulfilled"`
-	DownloadCount     int32              `bson:"download_count" json:"download_count"`
-	// Date              Date         `bson:"date" json:"date"`
-}
-
-// Date type
-type Date struct {
-	CreatedBy    string `bson:"created_by" json:"created_by"`
-	DateCreated  string `bson:"date_created" json:"date_created"`
-	DateModified string `bson:"date_modified" json:"date_modified"`
-	ModifiedBy   string `bson:"modified_by" json:"modified_by"`
-}
-
-// Attributes type
-type Attributes struct {
-	Band      string `bson:"band" json:"band"`
-	Frequency string `bson:"frequency" json:"frequency"`
-	Date      string `bson:"date,omitempty" json:"date,omitempty"`
-	RST string `bson:"rst,omitempty" json:"rst,omitempty"`
-	Mode string `bson:"mode,omitempty" json:"mode,omitempty"`
-}
-
-// Image type
-type Image struct {
-	FileName string `bson:"file_name" json:"file_name"`
-	B64      string `bson:"b64" json:"b64"`
-}
-
-type RGB struct {
-	R int `bson:"r" json:"r"`
-	G int `bson:"g" json:"g"`
-	B int `bson:"b" json:"b"`
-}
-
-type TextPosition struct {
-	X float64 `bson:"x" json:"x"`
-	Y float64 `bson:"y" json:"y"`
-}
-
-type TemplateProperty struct {
-	TextPosition TextPosition `bson:"text_position" json:"text_position"`
-	TextAlign    string       `bson:"text_align" json:"text_align"`
-	FontColor    RGB          `bson:"font_color" json:"font_color"`
-	FontName     string       `bson:"font_name" json:"font_name"`
-	FontSize     float64      `bson:"font_size" json:"font_size"`
-	FontDir      string       `bson:"font_dir" json:"font_dir"`
-}
-
-// ImageCertTemplate type
-type ImageCertTemplate struct {
-	FileName           string `bson:"file_name" json:"file_name"`
-	B64                string `bson:"b64" json:"b64"`
-	TemplateProperties struct {
-		FullTemplate bool `bson:"full_template" json:"full_template"`
-		CallSign     TemplateProperty `bson:"call_sign" json:"call_sign"`
-		IdentityName TemplateProperty `bson:"identity_name" json:"identity_name"`
-		Frequency    TemplateProperty `bson:"frequency" json:"frequency"`
-		RST    TemplateProperty `bson:"rst, omitempty" json:"rst,omitempty"`
-		Mode    TemplateProperty `bson:"mode, omitempty" json:"mode,omitempty"`
-		UTC    TemplateProperty `bson:"utc, omitempty" json:"utc,omitempty"`
-		Date TemplateProperty `bson:"date, omitempty" json:"date,omitempty"`
-		Band TemplateProperty `bson:"band, omitempty" json:"band,omitempty"`
-
-	} `bson:"template_properties" json:"template_properties"`
-}
-
-// CallSignPayload type
-type CallSignPayload struct {
-	Attributes        Attributes `bson:"attributes" json:"attributes"`
-	CertificateNumber string     `bson:"certificate_number,omitempty" json:"certificate_number,omitempty"`
-	CallSign          string     `bson:"call_sign" json:"call_sign"`
-	EventID           string     `bson:"event_id" json:"event_id"`
-	EventName         string     `bson:"event_name,omitempty" json:"event_name,omitempty"`
-	Name              string     `bson:"name" json:"name"`
-	IsFulfilled       bool       `bson:"is_fulfilled,omitempty" json:"is_fulfilled,omitempty"`
-	DownloadCount     int32      `bson:"download_count,omitempty" json:"download_count,omitempty"`
-}
-
-// ManyCallSignPayload type
-type ManyCallSignPayload struct {
-	Payload []CallSignPayload `bson:"payload" json:"payload"`
-}
-
-// EventCallSign type
-type EventCallSign struct {
-	Attributes          []Attributes       `bson:"attributes" json:"attributes"`
-	CertificateTemplate string             `bson:"certificate_template" json:"certificate_template"`
-	CertificateFormat   string             `bson:"certificate_format" json:"certificate_format"`
-	Description         string             `bson:"description" json:"description"`
-	Name                string             `bson:"name" json:"name"`
-	ID                  primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	IsActive            bool               `bson:"is_active" json:"is_active"`
-	IsHidden            bool               `bson:"is_hidden" json:"is_hidden"`
-	CityID              int32              `bson:"city_id" json:"city_id"`
-	//Date                string       `bson:"date" json:"date"`
-}
 
 // Adaptor Type
 type Adaptor struct {
 	Client mongo.Client
 	DBName string
 }
+
 
 // Connect method
 func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
@@ -276,7 +157,7 @@ func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, fi
 
 	err := cursor.All(ctx, result)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	return err
@@ -338,6 +219,9 @@ func (adaptor *Adaptor) QueryRemoveOne(ctx context.Context, collname string, que
 		Database(adaptor.DBName).
 		Collection(collname).
 		DeleteOne(ctx, queryFilter)
+	if err != nil {
+		return 0, err
+	}
 
 	return delResult.DeletedCount, err
 }
@@ -348,7 +232,10 @@ func (adaptor *Adaptor) QueryRemoveMany(ctx context.Context, collname string, qu
 		Database(adaptor.DBName).
 		Collection(collname).
 		DeleteMany(ctx, queryFilter)
+	if err != nil {
+		return 0, err
 
+	}
 	return delResult.DeletedCount, err
 }
 
@@ -385,12 +272,12 @@ func (adaptor *Adaptor) Modeling(jsonByte *[]byte, collname string) error {
 	var err error
 
 	if collname == "identity" {
-		identity := Identity{}
+		identity := models.Identity{}
 		err = bson.UnmarshalJSON(*jsonByte, &identity)
 		*jsonByte, err = bson.MarshalJSON(&identity)
 
 	} else if collname == "event" {
-		event := EventCallSign{}
+		event := models.EventCallSign{}
 		err = bson.UnmarshalJSON(*jsonByte, &event)
 		*jsonByte, err = bson.MarshalJSON(&event)
 	}
@@ -398,7 +285,7 @@ func (adaptor *Adaptor) Modeling(jsonByte *[]byte, collname string) error {
 }
 
 // ParseOptions method
-func (adaptor *Adaptor) ParseOptions(payload Payload, options *options.FindOptions) {
+func (adaptor *Adaptor) ParseOptions(payload models.Payload, options *options.FindOptions) {
 	// LIMIT
 	limitVal := payload.Options.Limit
 	if limitVal > 0 {
@@ -430,53 +317,27 @@ func (adaptor *Adaptor) ParseOptions(payload Payload, options *options.FindOptio
 	}
 }
 
-// //GetIdentities method
-// func (adaptor *Adaptor) GetIdentities(ctx context.Context, queryName bson.M, name string) []Identity {
-// 	collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
-// 	cursor, err := collection.Find(ctx, queryName)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer cursor.Close(ctx)
-//
-// 	var result []Identity
-// 	for cursor.Next(ctx) {
-// 		received := bson.M{}
-//
-// 		if err := cursor.Decode(&received); err != nil {
-// 			fmt.Println(err)
-// 		}
-//
-// 		bsonBytes, _ := bson.Marshal(&received)
-// 		var subIdentity Identity
-// 		bson.Unmarshal(bsonBytes, &subIdentity)
-//
-// 		result = append(result, subIdentity)
-// 	}
-// 	return result
-// }
+// SetDownloadLog
+func (adaptor *Adaptor) SetDownloadLog(ctx context.Context, downloadLogData models.SetDownloadLog) error {
+	_, errSetLog := adaptor.Client.Database(adaptor.DBName).
+		Collection(models.CollCertificateDownloadLog).
+		InsertOne(ctx, &downloadLogData)
+	if errSetLog != nil {
+		return errors.New("error inserting log: "+errSetLog.Error())
+	}
+	return nil
+}
 
-// //DeleteCollection method
-// func (adaptor *Adaptor) DeleteCollection(ctx context.Context, name string, deleteCode string) {
-// 	if deleteCode == "AGREE TO DELETE "+adaptor.CollName {
-// 		collection := adaptor.Client.Database(adaptor.DBName).Collection(adaptor.CollName)
-// 		delResult, err := collection.DeleteMany(ctx, bson.M{"name": name})
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-//
-// 		fmt.Println(delResult)
-// 	} else {
-// 		fmt.Println("ACCESS DENIED")
-// 	}
-// }
-
-// // LegalizePayload method
-// func (adaptor *Adaptor) LegalizePayload(bsonPayload bson.M, out interface{}) {
-// 	for key, value := range bsonPayload {
-// 		fmt.Printf("Key: %v Value: %v\n", key, value)
-// 	}
-// }
+// GetDownloadLog
+func (adaptor *Adaptor)GetDownloadLog(ctx context.Context, downloadLogQuery models.GetDownloadLog) error {
+	_, errGetLog := adaptor.Client.Database(adaptor.DBName).
+		Collection(models.CollCertificateDownloadLog).
+		InsertOne(ctx, &downloadLogQuery)
+	if errGetLog != nil {
+		return errors.New("error inserting log: "+errGetLog.Error())
+	}
+	return nil
+}
 
 // GetDate method
 func (adaptor *Adaptor) GetDate() string {

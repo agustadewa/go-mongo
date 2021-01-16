@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/agustadewa/gomongo"
+	"gitlab.com/yosiaagustadewa/qsl-service/models"
 	"image/png"
 	"io"
 	"log"
@@ -112,7 +112,7 @@ func (tool Tools) PrintPDFV2(name, callSign, band, templatePath, fileType string
 }
 
 // PrintPDFV3 method
-func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, fileType string, w io.Writer, imageCertTemplate gomongo.ImageCertTemplate) error {
+func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, fileType string, w io.Writer, imageCertTemplate models.ImageCertTemplate) error {
 	pdf := gofpdf.New("L", "mm", "A4", "")
 	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CallSign.FontDir)
 	pdf.AddFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.CallSign.FontName))
@@ -120,7 +120,7 @@ func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, file
 	pdf.AddFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.IdentityName.FontName))
 	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Frequency.FontDir)
 	pdf.AddFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Frequency.FontName))
-	handler := func(imageCertTemplate gomongo.ImageCertTemplate) func() {
+	handler := func(imageCertTemplate models.ImageCertTemplate) func() {
 		return func() {
 			// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
 			pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
@@ -155,7 +155,7 @@ func (tool Tools) PrintPDFV3(name, callSign, band, frequency, templatePath, file
 
 
 // PrintPDFV4 method
-func (tool Tools) PrintPDFV4(identity gomongo.Identity, bandIndex int, templatePath, fileType string, w io.Writer, imageCertTemplate gomongo.ImageCertTemplate) error {
+func (tool Tools) PrintPDFV4(identity models.Identity, bandIndex int, templatePath, fileType string, w io.Writer, imageCertTemplate models.ImageCertTemplate) error {
 	identityAttribute := identity.Attributes[bandIndex]
 
 	pdf := gofpdf.New("L", "mm", "A4", "")
@@ -165,7 +165,7 @@ func (tool Tools) PrintPDFV4(identity gomongo.Identity, bandIndex int, templateP
 	pdf.AddFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.IdentityName.FontName))
 	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Frequency.FontDir)
 	pdf.AddFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Frequency.FontName))
-	handler := func(imageCertTemplate gomongo.ImageCertTemplate) func() {
+	handler := func(imageCertTemplate models.ImageCertTemplate) func() {
 		return func() {
 			// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
 			pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
@@ -275,10 +275,16 @@ func (tool Tools) SaveImageFromB64(b64 string, filePath string) error {
 	// Create File
 	file, errCreateFile := os.Create(filePath)
 	if errCreateFile != nil {
-		panic(errCreateFile)
+	
+		return errCreateFile
 	}
-	defer file.Close()
 
+	defer func() {
+		if err:=file.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+	
 	// Encode JPG
 	//jpgOpt := jpeg.Options{Quality: 30}
 	//errEncodeJpg = jpeg.Encode(f, img, &jpgOpt)
