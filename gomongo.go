@@ -4,23 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.com/yosiaagustadewa/qsl-service/models"
 	"log"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/agustadewa/gomongo/tools"
+	"github.com/gin-gonic/gin"
+	"gitlab.com/yosiaagustadewa/qsl-service/models"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/mgo.v2/bson"
 )
 
-
 // Adaptor Type
 type Adaptor struct {
 	Client mongo.Client
 	DBName string
 }
-
 
 // Connect method
 func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
@@ -51,15 +53,13 @@ func (adaptor *Adaptor) QueryUpdateMany(ctx context.Context, collname string, fi
 }
 
 // QueryUpdateOne method
-func (adaptor *Adaptor) QueryUpdateOne(ctx context.Context, collname string, filterQuery bson.M, updateQuery bson.M) (*mongo.UpdateResult, error) {
+func (adaptor *Adaptor) QueryUpdateOne(ctx context.Context, collname string, updateOpt *options.UpdateOptions, filterQuery bson.M, updateQuery bson.M, result *mongo.UpdateResult) error {
 	var err error
-	fmt.Println("filterQuery", filterQuery)
-	fmt.Println("updateQuery", updateQuery)
-
-	var result *mongo.UpdateResult
-	result, err = adaptor.Client.Database(adaptor.DBName).Collection(collname).UpdateOne(ctx, filterQuery, updateQuery)
-
-	return result, err
+	result, err = adaptor.Client.Database(adaptor.DBName).Collection(collname).UpdateOne(ctx, filterQuery, updateQuery, updateOpt)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // QueryCreateCollection create collection in mongodb
@@ -123,7 +123,7 @@ func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuer
 }
 
 // QueryFindV2 query find to mongodb
-func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, findOneOptions *options.FindOneOptions ,query interface{}, result interface{}) error {
+func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, findOneOptions *options.FindOneOptions, query interface{}, result interface{}) error {
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
 	return collection.FindOne(ctx, query, findOneOptions).Decode(result)
 }
@@ -153,9 +153,12 @@ func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byte
 // QueryFindManyV2 query find many to mongodb
 func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, findOptions *options.FindOptions, query interface{}, result interface{}) error {
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
-	cursor, _ := collection.Find(ctx, query, findOptions)
+	cursor, err := collection.Find(ctx, query, findOptions)
+	if err != nil {
+		return err
+	}
 
-	err := cursor.All(ctx, result)
+	err = cursor.All(ctx, result)
 	if err != nil {
 		return err
 	}
@@ -197,23 +200,17 @@ func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collname string,
 //		"$set":         setQuery,
 //		"$setOnInsert": setOnInsertQuery,
 //	}
-func (adaptor *Adaptor) QueryFindAndUpdateV2(ctx context.Context, collname string, filterQuery interface{}, updateQuery interface{}, result *bson.M) error {
-	var updateOptions options.FindOneAndUpdateOptions
-	updateOptions.SetReturnDocument(1)
-	updateOptions.SetUpsert(true)
-
+func (adaptor *Adaptor) QueryFindAndUpdateV2(ctx context.Context, collname string, findAndUpdateOpt *options.FindOneAndUpdateOptions, filterQuery interface{}, updateQuery interface{}, result interface{}) error {
 	err := adaptor.Client.
 		Database(adaptor.DBName).
 		Collection(collname).
-		FindOneAndUpdate(ctx, filterQuery, updateQuery, &updateOptions).
-		Decode(&result)
-
-	fmt.Println("LAST INSERTED -->", result)
+		FindOneAndUpdate(ctx, filterQuery, updateQuery, findAndUpdateOpt).
+		Decode(result)
 
 	return err
 }
 
-//QueryRemoveOne method
+// QueryRemoveOne method
 func (adaptor *Adaptor) QueryRemoveOne(ctx context.Context, collname string, queryFilter interface{}) (int64, error) {
 	delResult, err := adaptor.Client.
 		Database(adaptor.DBName).
@@ -258,12 +255,13 @@ func (adaptor *Adaptor) QueryConfirm(ctx context.Context, collname, key, value s
 	}
 }
 
-///////////// PAYLOAD FILTER /////////////
+// /////////// PAYLOAD FILTER /////////////
 
 // ParsePayload method
-func (adaptor *Adaptor) ParsePayload(jsonByte []byte, out interface{}) {
+func (adaptor *Adaptor) ParsePayload(jsonByte []byte, out interface{}, c *gin.Context) {
 	if isErr := bson.UnmarshalJSON(jsonByte, out); isErr != nil {
-		fmt.Println(isErr)
+		c.JSON(400, c.Error(isErr))
+		return
 	}
 }
 
@@ -317,27 +315,42 @@ func (adaptor *Adaptor) ParseOptions(payload models.Payload, options *options.Fi
 	}
 }
 
+// ParseCertificateFormat
+func (adaptor *Adaptor) ParseCertificateFormat(certificateAttribute *models.CertificateAttribute) {
+	var certNumberGenerator tools.StringNumber
+	certNumberGenerator.SetNDigit(4)
+	certNumberGenerator.SetCounter(certificateAttribute.Number)
+
+	certificateAttribute.Frequency = strings.ReplaceAll(certificateAttribute.Frequency, " MHz", "")
+	certificateAttribute.Band = strings.ReplaceAll(certificateAttribute.Band, " M", "")
+	certificateAttribute.Format = strings.ReplaceAll(certificateAttribute.Format, "#NO#", certNumberGenerator.ValString(certificateAttribute.Number))
+	certificateAttribute.Format = strings.ReplaceAll(certificateAttribute.Format, "#FREQUENCY#", certificateAttribute.Frequency)
+	certificateAttribute.Format = strings.ReplaceAll(certificateAttribute.Format, "#MODE#", certificateAttribute.Mode)
+	certificateAttribute.Format = strings.ReplaceAll(certificateAttribute.Format, "#STATION#", certificateAttribute.Station)
+	certificateAttribute.Format = strings.ReplaceAll(certificateAttribute.Format, "#BAND#", certificateAttribute.Band)
+}
+
 // SetDownloadLog
-func (adaptor *Adaptor) SetDownloadLog(ctx context.Context, downloadLogData models.SetDownloadLog) error {
+func (adaptor *Adaptor) SetDownloadLog(ctx context.Context, downloadLogData models.DownloadLog) error {
 	_, errSetLog := adaptor.Client.Database(adaptor.DBName).
 		Collection(models.CollCertificateDownloadLog).
 		InsertOne(ctx, &downloadLogData)
 	if errSetLog != nil {
-		return errors.New("error inserting log: "+errSetLog.Error())
+		return errors.New("error inserting log: " + errSetLog.Error())
 	}
 	return nil
 }
 
-// GetDownloadLog
-func (adaptor *Adaptor)GetDownloadLog(ctx context.Context, downloadLogQuery models.GetDownloadLog) error {
-	_, errGetLog := adaptor.Client.Database(adaptor.DBName).
-		Collection(models.CollCertificateDownloadLog).
-		InsertOne(ctx, &downloadLogQuery)
-	if errGetLog != nil {
-		return errors.New("error inserting log: "+errGetLog.Error())
-	}
-	return nil
-}
+// // GetDownloadLog
+// func (adaptor *Adaptor)GetDownloadLog(ctx context.Context, downloadLogQuery models.GetDownloadLog) error {
+//	_, errGetLog := adaptor.Client.Database(adaptor.DBName).
+//		Collection(models.CollCertificateDownloadLog).
+//		InsertOne(ctx, &downloadLogQuery)
+//	if errGetLog != nil {
+//		return errors.New("error inserting log: "+errGetLog.Error())
+//	}
+//	return nil
+// }
 
 // GetDate method
 func (adaptor *Adaptor) GetDate() string {
