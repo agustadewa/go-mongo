@@ -160,32 +160,23 @@ func (tool Tools) PrintPDFV4(certNumber string, identity models.Identity, identi
 	identityAttribute := identity.Attributes[identityIndex]
 
 	pdf := gofpdf.New("L", "mm", "A4", "")
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CallSign.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.CallSign.FontName))
 
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.IdentityName.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.IdentityName.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.IdentityName.FontName))
+	addFont := func(fontName string) {
+		if fontName != "" {
+			pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CallSign.FontDir)
+			pdf.AddFont(fontName, "", fmt.Sprintf("%s.json", fontName))
+		}
+	}
 
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.CertificateNumber.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.CertificateNumber.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.CertificateNumber.FontName))
-
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Date.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.Date.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Date.FontName))
-
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.UTC.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.UTC.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.UTC.FontName))
-
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Band.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.Band.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Band.FontName))
-
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Mode.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.Mode.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Mode.FontName))
-
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.RST.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.RST.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.RST.FontName))
-
-	pdf.SetFontLocation(imageCertTemplate.TemplateProperties.Frequency.FontDir)
-	pdf.AddFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", fmt.Sprintf("%s.json", imageCertTemplate.TemplateProperties.Frequency.FontName))
+	addFont(imageCertTemplate.TemplateProperties.CallSign.FontName)
+	addFont(imageCertTemplate.TemplateProperties.IdentityName.FontName)
+	addFont(imageCertTemplate.TemplateProperties.CertificateNumber.FontName)
+	addFont(imageCertTemplate.TemplateProperties.Date.FontName)
+	addFont(imageCertTemplate.TemplateProperties.UTC.FontName)
+	addFont(imageCertTemplate.TemplateProperties.Band.FontName)
+	addFont(imageCertTemplate.TemplateProperties.Mode.FontName)
+	addFont(imageCertTemplate.TemplateProperties.RST.FontName)
+	addFont(imageCertTemplate.TemplateProperties.Frequency.FontName)
 
 	var handler func(imageCertTemplate models.ImageCertTemplate) func()
 
@@ -314,7 +305,6 @@ func (tool Tools) PrintPDFV4(certNumber string, identity models.Identity, identi
 				pdf.SetXY(imageCertTemplate.TemplateProperties.IdentityName.TextPosition.X, imageCertTemplate.TemplateProperties.IdentityName.TextPosition.Y)
 				pdf.SetTextColor(imageCertTemplate.TemplateProperties.IdentityName.FontColor.R, imageCertTemplate.TemplateProperties.IdentityName.FontColor.G, imageCertTemplate.TemplateProperties.IdentityName.FontColor.B)
 				pdf.CellFormat(10, 10, identity.Name, "", 0, imageCertTemplate.TemplateProperties.IdentityName.TextAlign, false, 0, "")
-
 
 				numericFullDate, _ := strconv.ParseInt(identityAttribute.Date, 10, 64)
 				fullDate := time.Unix(numericFullDate/1000, 0).UTC()
