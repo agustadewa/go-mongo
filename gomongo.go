@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/yosiaagustadewa/qsl-service/models"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/mgo.v2/bson"
@@ -253,6 +254,101 @@ func (adaptor *Adaptor) QueryConfirm(ctx context.Context, collname, key, value s
 	} else {
 		return false
 	}
+}
+
+func (adaptor *Adaptor) QuerySetIdentityCounter(ctx context.Context, count int, callSign, frequency string, mode ...string) (bool, error) {
+
+	attributeElem := bson.M{"frequency": frequency}
+	if len(mode) != 0 {
+		if mode[0] != "" {
+			attributeElem["mode"] = mode
+		}
+	}
+
+	updatedIdentity := mongo.UpdateResult{}
+	err := adaptor.QueryUpdateOne(
+		ctx,
+		models.CollIdentity,
+		&options.UpdateOptions{},
+		bson.M{
+			"call_sign": callSign,
+			"attributes": bson.M{
+				"$elemMatch": attributeElem,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"attributes.$.counter": count,
+			},
+		}, &updatedIdentity)
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (adaptor *Adaptor) QueryIncreaseEventCounter(ctx context.Context, id, frequency string) (bool, error) {
+	OID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return false, err
+	}
+
+	updatedEvent := mongo.UpdateResult{}
+	err = adaptor.QueryUpdateOne(
+		ctx,
+		models.CollEvent,
+		&options.UpdateOptions{},
+		bson.M{
+			"_id": OID,
+			"attributes": bson.M{
+				"$elemMatch": bson.M{
+					"frequency": frequency,
+				},
+			},
+		},
+		bson.M{
+			"$inc": bson.M{
+				"attributes.$.counter": 1,
+			},
+		}, &updatedEvent)
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (adaptor *Adaptor) QueryEventCounterValue(ctx context.Context, id, frequency string, countResult *int) error {
+	OID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	eventResult := models.Event{}
+	err = adaptor.QueryFindV2(
+		ctx,
+		models.CollEvent,
+		&options.FindOneOptions{
+			Projection: bson.M{
+				"attributes": bson.M{
+					"$elemMatch": bson.M{
+						"frequency": frequency,
+					},
+				},
+			},
+		},
+		bson.M{"_id": OID}, &eventResult)
+
+	if err != nil {
+		return err
+	}
+
+	*countResult = eventResult.Attributes[0].Counter
+
+	return nil
 }
 
 // /////////// PAYLOAD FILTER /////////////
