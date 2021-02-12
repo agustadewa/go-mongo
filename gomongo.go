@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
 	"github.com/agustadewa/gomongo/tools"
 	"github.com/gin-gonic/gin"
 	"gitlab.com/yosiaagustadewa/qsl-service/models"
-
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // Adaptor Type
@@ -75,7 +75,7 @@ func (adaptor *Adaptor) QueryInsert(ctx context.Context, collname string, byteQu
 	var errorInserting error
 
 	var query bson.M
-	bson.UnmarshalJSON(byteQuery, &query)
+	json.Unmarshal(byteQuery, &query)
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	insertResult, errorInserting = collection.InsertOne(ctx, query)
 
@@ -113,12 +113,12 @@ func (adaptor *Adaptor) QueryInsertV3(ctx context.Context, collname string, quer
 // QueryFind query find to mongodb
 func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuery []byte) ([]byte, error) {
 	var query bson.M
-	bson.UnmarshalJSON(byteQuery, &query)
+	json.Unmarshal(byteQuery, &query)
 
 	var received bson.M
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	errFinding := collection.FindOne(ctx, query).Decode(&received)
-	jsonBytes, _ := bson.MarshalJSON(&received)
+	jsonBytes, _ := json.Marshal(&received)
 
 	return jsonBytes, errFinding
 }
@@ -132,7 +132,7 @@ func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, findOn
 // QueryFindMany query find many to mongodb
 func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byteQuery []byte, findOptions *options.FindOptions) ([]byte, error) {
 	var query bson.M
-	bson.UnmarshalJSON(byteQuery, &query)
+	json.Unmarshal(byteQuery, &query)
 
 	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
 	cursor, _ := collection.Find(ctx, query, findOptions)
@@ -146,7 +146,7 @@ func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byte
 
 	// fmt.Println(received)
 	var results []byte
-	results, err = bson.MarshalJSON(received)
+	results, err = json.Marshal(received)
 
 	return results, err
 }
@@ -355,7 +355,7 @@ func (adaptor *Adaptor) QueryEventCounterValue(ctx context.Context, id, frequenc
 
 // ParsePayload method
 func (adaptor *Adaptor) ParsePayload(jsonByte []byte, out interface{}, c *gin.Context) {
-	if isErr := bson.UnmarshalJSON(jsonByte, out); isErr != nil {
+	if isErr := json.Unmarshal(jsonByte, out); isErr != nil {
 		c.JSON(400, c.Error(isErr))
 		return
 	}
@@ -367,13 +367,13 @@ func (adaptor *Adaptor) Modeling(jsonByte *[]byte, collname string) error {
 
 	if collname == "identity" {
 		identity := models.Identity{}
-		err = bson.UnmarshalJSON(*jsonByte, &identity)
-		*jsonByte, err = bson.MarshalJSON(&identity)
+		err = json.Unmarshal(*jsonByte, &identity)
+		*jsonByte, err = json.Marshal(&identity)
 
 	} else if collname == "event" {
 		event := models.EventCallSign{}
-		err = bson.UnmarshalJSON(*jsonByte, &event)
-		*jsonByte, err = bson.MarshalJSON(&event)
+		err = json.Unmarshal(*jsonByte, &event)
+		*jsonByte, err = json.Marshal(&event)
 	}
 	return err
 }
@@ -455,4 +455,108 @@ func (adaptor *Adaptor) GetDate() string {
 	parsedDate := string(dateRune[0:13])
 
 	return parsedDate
+}
+
+func (adaptopr *Adaptor) GetReportLog(ctx context.Context, request models.TRequestCallSignReport, results *[]models.TRequestCallSignReport) error {
+	/**
+	  $.ajax({
+	  	xhrFields: {
+	  		withCredentials: true,
+	  	},
+	  	type: "POST",
+	  	contentType: "application/json",
+	  	url: `http://localhost:8080/report/callsignlog`,
+	  	data: JSON.stringify({
+	  		kind: "report#callsignlog",
+	  		values: {
+	  			credential_id: "200812085131DE07D1GK55XT",
+	  			event_id: "5ff682b0e084fb19783316dc",
+	  			projection: ["name","call_sign","mode","rst","frequency", "band", "date"],
+				sort:[
+	                {name:-1},
+	                {call_sign:1},
+	                {mode:-1},
+	                {rst:1},
+	                {frequency:1},
+	                {band:1},
+	                {date:1}
+	            ]
+	  		}
+	  	}),
+	  	error: (err) => {
+	  		console.log(err)
+	  	}
+	  	}).then(console.log)
+	*/
+
+	limitValue := 1000
+	projectionRequest := []string{"name", "call_sign", "event_id", "mode", "rst", "frequency", "band", "date"}
+	sortRequest := []string{"name", "call_sign", "event_id", "mode", "rst", "frequency", "band", "date"}
+	eventID := "5ff682b0e084fb19783316dc"
+
+	var projection bson.D
+	for _, prj := range projectionRequest {
+		if prj == "name" || prj == "call_sign" || prj == "event_id" {
+			projection = append(projection, bson.E{prj, 1})
+		} else {
+			projection = append(projection, bson.E{"attributes." + prj, 1})
+		}
+	}
+
+	var sort bson.D
+	for _, srt := range sortRequest {
+		if srt == "name" || srt == "call_sign" || srt == "event_id" {
+			sort = append(sort, bson.E{srt, 1})
+		} else {
+			sort = append(sort, bson.E{"attributes." + srt, 1})
+		}
+	}
+
+	pipeline := mongo.Pipeline{
+		bson.D{
+			bson.E{"$match", bson.D{
+				bson.E{"event_id", eventID},
+			}},
+		},
+		bson.D{
+			bson.E{"$unwind", bson.D{
+				bson.E{"path", "$attributes"},
+				bson.E{"preserveNullAndEmptyArrays", true},
+			}},
+		},
+		bson.D{
+			bson.E{"$sort", bson.D{
+				bson.E{"name", 1},
+				bson.E{"attributes.date", 1},
+				bson.E{"call_sign", 1},
+				bson.E{"frequency", 1},
+			}},
+		},
+		bson.D{
+			bson.E{"$project", projection},
+		},
+		bson.D{
+			bson.E{"$limit", limitValue},
+		},
+	}
+
+	opt := options.AggregateOptions{}
+
+	cursor, err := adaptopr.Client.
+		Database(adaptopr.DBName).
+		Collection(models.CollIdentity).
+		Aggregate(ctx, pipeline, &opt)
+	if err != nil {
+		return err
+	}
+
+	tempResult := make([]models.TRequestCallSignReport, limitValue)
+	err = cursor.All(ctx, &tempResult)
+	if err != nil {
+		return err
+	}
+
+	*results = tempResult
+
+	return nil
 }
