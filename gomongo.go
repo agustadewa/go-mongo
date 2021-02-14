@@ -2,6 +2,7 @@ package gomongo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
 	"github.com/agustadewa/gomongo/tools"
 	"github.com/gin-gonic/gin"
 	"gitlab.com/yosiaagustadewa/qsl-service/models"
@@ -42,21 +42,21 @@ func (adaptor *Adaptor) Connect(ctx context.Context, uri string) {
 }
 
 // QueryUpdateDocument method
-func (adaptor *Adaptor) QueryUpdateMany(ctx context.Context, collname string, filterQuery bson.M, updateQuery bson.M) error {
+func (adaptor *Adaptor) QueryUpdateMany(ctx context.Context, collName string, filterQuery bson.M, updateQuery bson.M) error {
 	var err error
 	fmt.Println("filterQuery", filterQuery)
 	fmt.Println("updateQuery", updateQuery)
 
-	Collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	Collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
 	_, err = Collection.UpdateMany(ctx, filterQuery, updateQuery)
 
 	return err
 }
 
 // QueryUpdateOne method
-func (adaptor *Adaptor) QueryUpdateOne(ctx context.Context, collname string, updateOpt *options.UpdateOptions, filterQuery bson.M, updateQuery bson.M, result *mongo.UpdateResult) error {
+func (adaptor *Adaptor) QueryUpdateOne(ctx context.Context, collName string, updateOpt *options.UpdateOptions, filterQuery bson.M, updateQuery bson.M, result *mongo.UpdateResult) error {
 	var err error
-	result, err = adaptor.Client.Database(adaptor.DBName).Collection(collname).UpdateOne(ctx, filterQuery, updateQuery, updateOpt)
+	result, err = adaptor.Client.Database(adaptor.DBName).Collection(collName).UpdateOne(ctx, filterQuery, updateQuery, updateOpt)
 	if err != nil {
 		return err
 	}
@@ -64,29 +64,33 @@ func (adaptor *Adaptor) QueryUpdateOne(ctx context.Context, collname string, upd
 }
 
 // QueryCreateCollection create collection in mongodb
-func (adaptor *Adaptor) QueryCreateCollection(ctx context.Context, collname string) error {
-	errCreateCollection := adaptor.Client.Database(adaptor.DBName).CreateCollection(ctx, collname)
+func (adaptor *Adaptor) QueryCreateCollection(ctx context.Context, collName string) error {
+	errCreateCollection := adaptor.Client.Database(adaptor.DBName).CreateCollection(ctx, collName)
 	return errCreateCollection
 }
 
 // QueryInsert Query Insert to mongodb
-func (adaptor *Adaptor) QueryInsert(ctx context.Context, collname string, byteQuery []byte) (interface{}, error) {
+func (adaptor *Adaptor) QueryInsert(ctx context.Context, collName string, byteQuery []byte) (interface{}, error) {
 	var insertResult interface{}
 	var errorInserting error
 
 	var query bson.M
-	json.Unmarshal(byteQuery, &query)
-	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	err := json.Unmarshal(byteQuery, &query)
+	if err != nil {
+		return nil, err
+	}
+
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
 	insertResult, errorInserting = collection.InsertOne(ctx, query)
 
 	return insertResult, errorInserting
 }
 
 // QueryInsertV2 Query Insert to mongodb
-func (adaptor *Adaptor) QueryInsertV2(ctx context.Context, collname string, query interface{}, result interface{}) error {
+func (adaptor *Adaptor) QueryInsertV2(ctx context.Context, collName string, query interface{}, result interface{}) error {
 	result, errorInserting := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		InsertOne(ctx, query)
 
 	if errorInserting != nil {
@@ -97,10 +101,10 @@ func (adaptor *Adaptor) QueryInsertV2(ctx context.Context, collname string, quer
 }
 
 // QueryInsertV2 Query Insert to mongodb
-func (adaptor *Adaptor) QueryInsertV3(ctx context.Context, collname string, query interface{}) (*mongo.InsertOneResult, error) {
+func (adaptor *Adaptor) QueryInsertV3(ctx context.Context, collName string, query interface{}) (*mongo.InsertOneResult, error) {
 	result, errorInserting := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		InsertOne(ctx, query)
 
 	if errorInserting != nil {
@@ -111,12 +115,15 @@ func (adaptor *Adaptor) QueryInsertV3(ctx context.Context, collname string, quer
 }
 
 // QueryFind query find to mongodb
-func (adaptor *Adaptor) QueryFind(ctx context.Context, collname string, byteQuery []byte) ([]byte, error) {
+func (adaptor *Adaptor) QueryFind(ctx context.Context, collName string, byteQuery []byte) ([]byte, error) {
 	var query bson.M
-	json.Unmarshal(byteQuery, &query)
+	err := json.Unmarshal(byteQuery, &query)
+	if err != nil {
+		return nil, err
+	}
 
 	var received bson.M
-	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
 	errFinding := collection.FindOne(ctx, query).Decode(&received)
 	jsonBytes, _ := json.Marshal(&received)
 
@@ -130,30 +137,29 @@ func (adaptor *Adaptor) QueryFindV2(ctx context.Context, collName string, findOn
 }
 
 // QueryFindMany query find many to mongodb
-func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collname string, byteQuery []byte, findOptions *options.FindOptions) ([]byte, error) {
+func (adaptor *Adaptor) QueryFindMany(ctx context.Context, collName string, byteQuery []byte, findOptions *options.FindOptions) ([]byte, error) {
 	var query bson.M
-	json.Unmarshal(byteQuery, &query)
+	err := json.Unmarshal(byteQuery, &query)
+	if err != nil {
+		return nil, err
+	}
 
-	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
 	cursor, _ := collection.Find(ctx, query, findOptions)
 
 	var received []bson.M
-	var err error
-
 	if err = cursor.All(ctx, &received); err != nil {
 		log.Fatal(err)
 	}
 
-	// fmt.Println(received)
-	var results []byte
-	results, err = json.Marshal(received)
+	results, err := json.Marshal(received)
 
 	return results, err
 }
 
 // QueryFindManyV2 query find many to mongodb
-func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, findOptions *options.FindOptions, query interface{}, result interface{}) error {
-	collection := adaptor.Client.Database(adaptor.DBName).Collection(collname)
+func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collName string, findOptions *options.FindOptions, query interface{}, result interface{}) error {
+	collection := adaptor.Client.Database(adaptor.DBName).Collection(collName)
 	cursor, err := collection.Find(ctx, query, findOptions)
 	if err != nil {
 		return err
@@ -168,17 +174,17 @@ func (adaptor *Adaptor) QueryFindManyV2(ctx context.Context, collname string, fi
 }
 
 // QueryCount query find to mongodb
-func (adaptor *Adaptor) QueryCount(ctx context.Context, collname string, query bson.M) (int64, error) {
+func (adaptor *Adaptor) QueryCount(ctx context.Context, collName string, query bson.M) (int64, error) {
 	Count, err := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		CountDocuments(ctx, query)
 
 	return Count, err
 }
 
 // QueryFindAndUpdate method
-func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collname string, queryFilter bson.M, setQuery bson.M, setOnInsertQuery bson.M) (int64, error) {
+func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collName string, queryFilter bson.M, setQuery bson.M, setOnInsertQuery bson.M) (int64, error) {
 	var err error
 	var count int64
 
@@ -187,12 +193,12 @@ func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collname string,
 		"$setOnInsert": setOnInsertQuery,
 	}
 
-	var updateOptions *options.FindOneAndUpdateOptions
+	var updateOptions options.FindOneAndUpdateOptions
 	updateOptions.SetReturnDocument(1)
 	updateOptions.SetUpsert(true)
 
-	insertResult := adaptor.Client.Database(adaptor.DBName).Collection(collname).FindOneAndUpdate(ctx, queryFilter, updateQuery, updateOptions)
-	fmt.Println(*insertResult)
+	_ = adaptor.Client.Database(adaptor.DBName).Collection(collName).FindOneAndUpdate(ctx, queryFilter, updateQuery, &updateOptions)
+
 	return count, err
 }
 
@@ -201,10 +207,10 @@ func (adaptor *Adaptor) QueryFindAndUpdate(ctx context.Context, collname string,
 //		"$set":         setQuery,
 //		"$setOnInsert": setOnInsertQuery,
 //	}
-func (adaptor *Adaptor) QueryFindAndUpdateV2(ctx context.Context, collname string, findAndUpdateOpt *options.FindOneAndUpdateOptions, filterQuery interface{}, updateQuery interface{}, result interface{}) error {
+func (adaptor *Adaptor) QueryFindAndUpdateV2(ctx context.Context, collName string, findAndUpdateOpt *options.FindOneAndUpdateOptions, filterQuery interface{}, updateQuery interface{}, result interface{}) error {
 	err := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		FindOneAndUpdate(ctx, filterQuery, updateQuery, findAndUpdateOpt).
 		Decode(result)
 
@@ -212,10 +218,10 @@ func (adaptor *Adaptor) QueryFindAndUpdateV2(ctx context.Context, collname strin
 }
 
 // QueryRemoveOne method
-func (adaptor *Adaptor) QueryRemoveOne(ctx context.Context, collname string, queryFilter interface{}) (int64, error) {
+func (adaptor *Adaptor) QueryRemoveOne(ctx context.Context, collName string, queryFilter interface{}) (int64, error) {
 	delResult, err := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		DeleteOne(ctx, queryFilter)
 	if err != nil {
 		return 0, err
@@ -225,10 +231,10 @@ func (adaptor *Adaptor) QueryRemoveOne(ctx context.Context, collname string, que
 }
 
 // QueryRemoveMany method
-func (adaptor *Adaptor) QueryRemoveMany(ctx context.Context, collname string, queryFilter interface{}) (int64, error) {
+func (adaptor *Adaptor) QueryRemoveMany(ctx context.Context, collName string, queryFilter interface{}) (int64, error) {
 	delResult, err := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		DeleteMany(ctx, queryFilter)
 	if err != nil {
 		return 0, err
@@ -238,11 +244,11 @@ func (adaptor *Adaptor) QueryRemoveMany(ctx context.Context, collname string, qu
 }
 
 // QueryConfirm method
-func (adaptor *Adaptor) QueryConfirm(ctx context.Context, collname, key, value string) bool {
+func (adaptor *Adaptor) QueryConfirm(ctx context.Context, collName, key, value string) bool {
 	queryResult := bson.M{}
 	errFindKey := adaptor.Client.
 		Database(adaptor.DBName).
-		Collection(collname).
+		Collection(collName).
 		FindOne(ctx, bson.M{"key": key}).
 		Decode(&queryResult)
 	if errFindKey != nil {
@@ -362,15 +368,15 @@ func (adaptor *Adaptor) ParsePayload(jsonByte []byte, out interface{}, c *gin.Co
 }
 
 // Modeling filler
-func (adaptor *Adaptor) Modeling(jsonByte *[]byte, collname string) error {
+func (adaptor *Adaptor) Modeling(jsonByte *[]byte, collName string) error {
 	var err error
 
-	if collname == "identity" {
+	if collName == "identity" {
 		identity := models.Identity{}
 		err = json.Unmarshal(*jsonByte, &identity)
 		*jsonByte, err = json.Marshal(&identity)
 
-	} else if collname == "event" {
+	} else if collName == "event" {
 		event := models.EventCallSign{}
 		err = json.Unmarshal(*jsonByte, &event)
 		*jsonByte, err = json.Marshal(&event)
@@ -457,7 +463,7 @@ func (adaptor *Adaptor) GetDate() string {
 	return parsedDate
 }
 
-func (adaptopr *Adaptor) GetReportLog(ctx context.Context, request models.TRequestCallSignReport, results *[]models.TRequestCallSignReport) error {
+func (adaptor *Adaptor) GetReportLog(ctx context.Context, request models.TRequestCallSignReport, results *[]models.TResponseCallSignReport) error {
 	/**
 	  $.ajax({
 	  	xhrFields: {
@@ -489,74 +495,123 @@ func (adaptopr *Adaptor) GetReportLog(ctx context.Context, request models.TReque
 	  	}).then(console.log)
 	*/
 
-	limitValue := 1000
-	projectionRequest := []string{"name", "call_sign", "event_id", "mode", "rst", "frequency", "band", "date"}
-	sortRequest := []string{"name", "call_sign", "event_id", "mode", "rst", "frequency", "band", "date"}
-	eventID := "5ff682b0e084fb19783316dc"
-
-	var projection bson.D
-	for _, prj := range projectionRequest {
-		if prj == "name" || prj == "call_sign" || prj == "event_id" {
-			projection = append(projection, bson.E{prj, 1})
-		} else {
-			projection = append(projection, bson.E{"attributes." + prj, 1})
-		}
+	var eventName string
+	err := adaptor.GetEventName(ctx, request.EventID, &eventName)
+	if err != nil {
+		return err
 	}
 
-	var sort bson.D
-	for _, srt := range sortRequest {
-		if srt == "name" || srt == "call_sign" || srt == "event_id" {
-			sort = append(sort, bson.E{srt, 1})
-		} else {
-			sort = append(sort, bson.E{"attributes." + srt, 1})
-		}
+	limitValue := request.Limit
+	if limitValue > 2000 {
+		limitValue = 2000
+	}
+
+	var projections = make(bson.D, 0, len(request.Projections))
+	for _, prj := range request.Projections {
+		projections = append(projections, bson.E{Key: prj, Value: 1})
+	}
+
+	var sorts = make(bson.D, 0, len(request.Sorts))
+	for _, s := range request.Sorts {
+		sorts = append(sorts, bson.E{Key: s.Key, Value: s.Value.GetVal()})
 	}
 
 	pipeline := mongo.Pipeline{
-		bson.D{
-			bson.E{"$match", bson.D{
-				bson.E{"event_id", eventID},
-			}},
-		},
-		bson.D{
-			bson.E{"$unwind", bson.D{
-				bson.E{"path", "$attributes"},
-				bson.E{"preserveNullAndEmptyArrays", true},
-			}},
-		},
-		bson.D{
-			bson.E{"$sort", bson.D{
-				bson.E{"name", 1},
-				bson.E{"attributes.date", 1},
-				bson.E{"call_sign", 1},
-				bson.E{"frequency", 1},
-			}},
-		},
-		bson.D{
-			bson.E{"$project", projection},
-		},
-		bson.D{
-			bson.E{"$limit", limitValue},
-		},
+		bson.D{{Key: "$match", Value: bson.D{{Key: "event_id", Value: request.EventID}}}},
+		bson.D{{Key: "$unwind", Value: bson.D{
+			bson.E{Key: "path", Value: "$attributes"},
+			bson.E{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+		bson.D{{Key: "$replaceRoot", Value: bson.M{
+			"newRoot": bson.M{
+				"$mergeObjects": bson.A{
+					bson.M{
+						"name":       bson.M{"$trim": bson.M{"input": "$$ROOT.name"}},
+						"call_sign":  "$$ROOT.call_sign",
+						"event_name": eventName,
+					},
+					"$$ROOT.attributes",
+				},
+			},
+		}}},
+		bson.D{{Key: "$sort", Value: sorts}},
+		bson.D{{Key: "$limit", Value: limitValue}},
+		bson.D{{Key: "$project", Value: projections}},
 	}
 
 	opt := options.AggregateOptions{}
 
-	cursor, err := adaptopr.Client.
-		Database(adaptopr.DBName).
+	cursor, err := adaptor.Client.
+		Database(adaptor.DBName).
 		Collection(models.CollIdentity).
 		Aggregate(ctx, pipeline, &opt)
 	if err != nil {
 		return err
 	}
 
-	tempResult := make([]models.TRequestCallSignReport, limitValue)
-	err = cursor.All(ctx, &tempResult)
+	err = cursor.All(ctx, results)
 	if err != nil {
 		return err
 	}
 
-	*results = tempResult
+	return nil
+}
+
+func (adaptor *Adaptor) GetEventName(ctx context.Context, ID string, result *string) error {
+	var event models.Event
+
+	OID, err := primitive.ObjectIDFromHex(ID)
+	if err != nil {
+		return err
+	}
+
+	err = adaptor.Client.
+		Database(adaptor.DBName).
+		Collection(models.CollEvent).
+		FindOne(ctx, bson.M{
+			"_id": OID,
+		}).Decode(&event)
+
+	if err != nil {
+		return err
+	}
+
+	*result = event.Name
 
 	return nil
+}
+
+func (adaptor *Adaptor) Pagination(docLimit, page, totalDoc int64, opt *options.FindOptions) int64 {
+
+	// PAGINATION
+	if docLimit < 1 {
+		docLimit = 1
+	}
+
+	if docLimit > totalDoc {
+		docLimit = totalDoc
+	}
+
+	if docLimit == 0 {
+		docLimit = 1
+	}
+
+	totalPage := totalDoc / docLimit
+
+	if totalDoc%docLimit != 0 {
+		totalPage++
+	}
+
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPage {
+		page = totalPage
+	}
+
+	skipValue := (page - 1) * docLimit
+	opt.SetSkip(skipValue)
+	opt.SetLimit(docLimit)
+
+	return totalPage
 }
