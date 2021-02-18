@@ -441,6 +441,8 @@ func (tool Tools) PrintPDFV4(certNumber string, identity models.Identity, identi
 				pdf.CellFormat(10, 10, identityAttribute.RST, "", 0, imageCertTemplate.TemplateProperties.RST.TextAlign, false, 0, "")
 			}
 		}
+	} else {
+		return errors.New("handler not found")
 	}
 
 	pdf.SetHeaderFunc(handler(imageCertTemplate))
