@@ -615,3 +615,16 @@ func (adaptor *Adaptor) Pagination(docLimit, page, totalDoc int64, opt *options.
 
 	return totalPage
 }
+
+// GetNameRecommendation method
+func (adaptor *Adaptor) GetNameRecommendationByCallSign(ctx context.Context, callSign string) (string, error) {
+
+	var res models.CallSignName
+	if err := adaptor.Client.Database(adaptor.DBName).Collection("callsign_name").FindOne(ctx, bson.M{
+		"call_sign": callSign,
+	}).Decode(&res); err != nil {
+		return "", err
+	}
+
+	return res.Name, nil
+}

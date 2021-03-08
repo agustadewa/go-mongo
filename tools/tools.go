@@ -395,7 +395,7 @@ func (tool Tools) PrintPDFV4(certNumber string, identity models.Identity, identi
 				pdf.SetFont(imageCertTemplate.TemplateProperties.CallSign2.FontName, "", imageCertTemplate.TemplateProperties.CallSign2.FontSize)
 				pdf.SetXY(imageCertTemplate.TemplateProperties.CallSign2.TextPosition.X, imageCertTemplate.TemplateProperties.CallSign2.TextPosition.Y)
 				pdf.SetTextColor(imageCertTemplate.TemplateProperties.CallSign2.FontColor.R, imageCertTemplate.TemplateProperties.CallSign2.FontColor.G, imageCertTemplate.TemplateProperties.CallSign2.FontColor.B)
-				pdf.CellFormat(40, 10, identity.CallSign, "", 0, imageCertTemplate.TemplateProperties.CallSign.TextAlign, false, 0, "")
+				pdf.CellFormat(40, 10, identity.CallSign, "", 0, imageCertTemplate.TemplateProperties.CallSign2.TextAlign, false, 0, "")
 
 				numericFullDate, _ := strconv.ParseInt(identityAttribute.Date, 10, 64)
 				fullDate := time.Unix(numericFullDate/1000, 0).UTC()
