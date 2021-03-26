@@ -441,6 +441,51 @@ func (tool Tools) PrintPDFV4(certNumber string, identity models.Identity, identi
 				pdf.CellFormat(10, 10, identityAttribute.RST, "", 0, imageCertTemplate.TemplateProperties.RST.TextAlign, false, 0, "")
 			}
 		}
+	} else if imageCertTemplate.TemplateProperties.TemplateType == "TYPE 5" {
+		handler = func(imageCertTemplate models.ImageCertTemplate) func() {
+			return func() {
+				// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
+				pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
+
+				// CALL SIGN
+				pdf.SetFont(imageCertTemplate.TemplateProperties.CallSign.FontName, "", imageCertTemplate.TemplateProperties.CallSign.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.CallSign.TextPosition.X, imageCertTemplate.TemplateProperties.CallSign.TextPosition.Y)
+				pdf.SetTextColor(imageCertTemplate.TemplateProperties.CallSign.FontColor.R, imageCertTemplate.TemplateProperties.CallSign.FontColor.G, imageCertTemplate.TemplateProperties.CallSign.FontColor.B)
+				pdf.CellFormat(40, 10, identity.CallSign, "", 0, imageCertTemplate.TemplateProperties.CallSign.TextAlign, false, 0, "")
+
+				// UTC
+				numericFullDate, _ := strconv.ParseInt(identityAttribute.Date, 10, 64)
+				fullDate := time.Unix(numericFullDate/1000, 0).UTC()
+
+				simpleUTCTime := fullDate.Format("15:04")
+
+				pdf.SetFont(imageCertTemplate.TemplateProperties.UTC.FontName, "", imageCertTemplate.TemplateProperties.UTC.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.UTC.TextPosition.X, imageCertTemplate.TemplateProperties.UTC.TextPosition.Y)
+				utcFontColor := imageCertTemplate.TemplateProperties.UTC.FontColor
+				pdf.SetTextColor(utcFontColor.R, utcFontColor.G, utcFontColor.B)
+				pdf.CellFormat(10, 10, simpleUTCTime, "", 0, imageCertTemplate.TemplateProperties.UTC.TextAlign, false, 0, "")
+
+				// FREQUENCY
+				pdf.SetFont(imageCertTemplate.TemplateProperties.Frequency.FontName, "", imageCertTemplate.TemplateProperties.Frequency.FontSize)
+				pdf.SetTextColor(imageCertTemplate.TemplateProperties.Frequency.FontColor.R, imageCertTemplate.TemplateProperties.Frequency.FontColor.G, imageCertTemplate.TemplateProperties.Frequency.FontColor.B)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.Frequency.TextPosition.X, imageCertTemplate.TemplateProperties.Frequency.TextPosition.Y)
+				pdf.CellFormat(10, 10, identityAttribute.Frequency, "", 0, imageCertTemplate.TemplateProperties.Frequency.TextAlign, false, 0, "")
+
+				// MODE
+				pdf.SetFont(imageCertTemplate.TemplateProperties.Mode.FontName, "", imageCertTemplate.TemplateProperties.Mode.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.Mode.TextPosition.X, imageCertTemplate.TemplateProperties.Mode.TextPosition.Y)
+				modeFontColor := imageCertTemplate.TemplateProperties.Mode.FontColor
+				pdf.SetTextColor(modeFontColor.R, modeFontColor.G, modeFontColor.B)
+				pdf.CellFormat(10, 10, identityAttribute.Mode, "", 0, imageCertTemplate.TemplateProperties.Mode.TextAlign, false, 0, "")
+
+				// RST
+				pdf.SetFont(imageCertTemplate.TemplateProperties.RST.FontName, "", imageCertTemplate.TemplateProperties.RST.FontSize)
+				pdf.SetXY(imageCertTemplate.TemplateProperties.RST.TextPosition.X, imageCertTemplate.TemplateProperties.RST.TextPosition.Y)
+				rstFontColor := imageCertTemplate.TemplateProperties.RST.FontColor
+				pdf.SetTextColor(rstFontColor.R, rstFontColor.G, rstFontColor.B)
+				pdf.CellFormat(10, 10, identityAttribute.RST, "", 0, imageCertTemplate.TemplateProperties.RST.TextAlign, false, 0, "")
+			}
+		}
 	} else {
 		return errors.New("handler not found")
 	}
