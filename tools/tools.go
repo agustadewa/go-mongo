@@ -524,7 +524,7 @@ func (tool Tools) SaveImageFromB64(b64 string, filePath string) error {
 	// Decode PNG
 	img, errDecodePng := png.Decode(reader)
 	if errDecodePng != nil {
-		panic("BAD PNG")
+		return errDecodePng
 	}
 
 	// Create File
@@ -536,7 +536,7 @@ func (tool Tools) SaveImageFromB64(b64 string, filePath string) error {
 
 	defer func() {
 		if err := file.Close(); err != nil {
-			fmt.Println(err)
+			// Do nothing
 		}
 	}()
 
