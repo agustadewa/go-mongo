@@ -184,7 +184,6 @@ func (tool Tools) PrintPDFV4(certNumber string, identity models.Identity, identi
 	if imageCertTemplate.TemplateProperties.TemplateType == "TYPE 1" {
 		handler = func(imageCertTemplate models.ImageCertTemplate) func() {
 			return func() {
-				// pdf.Image("./assets/templates/template1.jpg", 0, 0, 297, 200, true, "", 0, "")
 				pdf.ImageOptions(templatePath, 0, 0, 297, 210, false, gofpdf.ImageOptions{ImageType: fileType, ReadDpi: true}, 0, "")
 
 				// CALL SIGN
